@@ -13,6 +13,7 @@ const Profile = () => {
     // Profile State
     const [fullName, setFullName] = useState('')
     const [avatarUrl, setAvatarUrl] = useState('')
+    const [description, setDescription] = useState('')
     const [email, setEmail] = useState('')
 
     useEffect(() => {
@@ -35,7 +36,7 @@ const Profile = () => {
             // Fetch profile from 'profiles' table
             const { data, error } = await supabase
                 .from('profiles')
-                .select(`full_name, avatar_url`)
+                .select(`full_name, avatar_url, description`)
                 .eq('id', session.user.id)
                 .single()
 
@@ -46,6 +47,7 @@ const Profile = () => {
             if (data) {
                 setFullName(data.full_name || '')
                 setAvatarUrl(data.avatar_url || '')
+                setDescription(data.description || '')
             } else {
                 setFullName(session.user.user_metadata.full_name || '')
             }
@@ -99,6 +101,7 @@ const Profile = () => {
                 id: session.user.id,
                 full_name: fullName,
                 avatar_url: avatarUrl,
+                description: description,
             }
 
             const { error } = await supabase.from('profiles').upsert(updates)
@@ -115,6 +118,16 @@ const Profile = () => {
             alert(error.message)
         } finally {
             setSaving(false)
+        }
+    }
+
+    const handleLogout = async () => {
+        try {
+            const { error } = await supabase.auth.signOut()
+            if (error) throw error
+            navigate('/')
+        } catch (error) {
+            alert(error.message)
         }
     }
 
@@ -223,7 +236,31 @@ const Profile = () => {
                                 <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.5rem' }}>Select an image to upload. It will be stored securely.</p>
                             </div>
 
-                            <div style={{ display: 'flex', gap: '1rem' }}>
+                            <div style={{ marginBottom: '2rem' }}>
+                                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#64748b', marginBottom: '0.5rem' }}>Bio / Description</label>
+                                <textarea
+                                    value={description}
+                                    onChange={(e) => setDescription(e.target.value)}
+                                    placeholder="Tell us a little about yourself (max 100 chars)..."
+                                    maxLength={100}
+                                    rows="3"
+                                    style={{
+                                        width: '100%',
+                                        padding: '0.75rem',
+                                        borderRadius: '8px',
+                                        border: '1px solid #e2e8f0',
+                                        fontSize: '0.875rem',
+                                        color: '#0f172a',
+                                        fontFamily: 'inherit',
+                                        resize: 'none'
+                                    }}
+                                />
+                                <p style={{ textAlign: 'right', fontSize: '0.75rem', color: description.length >= 100 ? '#ef4444' : '#94a3b8', marginTop: '0.25rem' }}>
+                                    {description.length}/100
+                                </p>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <button
                                     type="submit"
                                     disabled={saving}
@@ -239,6 +276,23 @@ const Profile = () => {
                                     }}
                                 >
                                     {saving ? 'Saving...' : 'Save Changes'}
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={handleLogout}
+                                    style={{
+                                        padding: '0.75rem 2rem',
+                                        backgroundColor: '#fee2e2',
+                                        color: '#ef4444',
+                                        border: 'none',
+                                        borderRadius: '8px',
+                                        fontWeight: '600',
+                                        cursor: 'pointer',
+                                        transition: 'background 0.2s'
+                                    }}
+                                >
+                                    Sign Out
                                 </button>
                             </div>
                         </form>

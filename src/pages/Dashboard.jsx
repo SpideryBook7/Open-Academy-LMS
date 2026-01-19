@@ -7,6 +7,7 @@ const Dashboard = () => {
     const navigate = useNavigate()
     const [user, setUser] = useState(null)
     const [avatarUrl, setAvatarUrl] = useState(null)
+    const [description, setDescription] = useState('')
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
@@ -20,12 +21,13 @@ const Dashboard = () => {
                 // Fetch profile data
                 const { data } = await supabase
                     .from('profiles')
-                    .select('avatar_url')
+                    .select('avatar_url, description')
                     .eq('id', session.user.id)
                     .single()
 
-                if (data?.avatar_url) {
+                if (data) {
                     setAvatarUrl(data.avatar_url)
+                    setDescription(data.description)
                 }
             }
             setLoading(false)
@@ -151,7 +153,7 @@ const Dashboard = () => {
                                 <p style={{ fontSize: '0.875rem', color: '#64748b' }}>Student</p>
                             </div>
                             <p style={{ fontSize: '0.875rem', color: '#94a3b8', lineHeight: '1.5' }}>
-                                Always learning, always growing. Passionate about Design and Data.
+                                {description || 'Always learning, always growing. Passionate about Design and Data.'}
                             </p>
                         </div>
                         {/* Calendar Widget (Simplified) */}
