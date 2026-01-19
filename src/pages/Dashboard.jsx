@@ -6,6 +6,7 @@ import Sidebar from '../components/Sidebar'
 const Dashboard = () => {
     const navigate = useNavigate()
     const [user, setUser] = useState(null)
+    const [avatarUrl, setAvatarUrl] = useState(null)
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
@@ -15,6 +16,17 @@ const Dashboard = () => {
                 navigate('/')
             } else {
                 setUser(session.user)
+
+                // Fetch profile data
+                const { data } = await supabase
+                    .from('profiles')
+                    .select('avatar_url')
+                    .eq('id', session.user.id)
+                    .single()
+
+                if (data?.avatar_url) {
+                    setAvatarUrl(data.avatar_url)
+                }
             }
             setLoading(false)
         }
@@ -49,8 +61,8 @@ const Dashboard = () => {
                         </button>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                             <img
-                                src={`https://ui-avatars.com/api/?name=${user?.user_metadata?.full_name || 'User'}&background=random`}
-                                style={{ width: '40px', height: '40px', borderRadius: '50%', border: '2px solid white', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
+                                src={avatarUrl || `https://ui-avatars.com/api/?name=${user?.user_metadata?.full_name || 'User'}&background=random`}
+                                style={{ width: '40px', height: '40px', borderRadius: '50%', border: '2px solid white', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', objectFit: 'cover' }}
                                 alt="Profile"
                             />
                             <div>
@@ -131,8 +143,8 @@ const Dashboard = () => {
                             </div>
                             <div style={{ marginBottom: '1rem' }}>
                                 <img
-                                    src={`https://ui-avatars.com/api/?name=${user?.user_metadata?.full_name || 'User'}&background=random`}
-                                    style={{ width: '80px', height: '80px', borderRadius: '50%', marginBottom: '1rem' }}
+                                    src={avatarUrl || `https://ui-avatars.com/api/?name=${user?.user_metadata?.full_name || 'User'}&background=random`}
+                                    style={{ width: '80px', height: '80px', borderRadius: '50%', marginBottom: '1rem', objectFit: 'cover' }}
                                     alt="Avatar"
                                 />
                                 <h3 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '0.25rem', color: '#0f172a' }}>{user?.user_metadata?.full_name || 'Alex Proflum'}</h3>

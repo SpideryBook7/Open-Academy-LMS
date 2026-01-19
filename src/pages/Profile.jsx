@@ -7,6 +7,7 @@ const Profile = () => {
     const navigate = useNavigate()
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
+    const [uploading, setUploading] = useState(false)
     const [user, setUser] = useState(null)
 
     // Profile State
@@ -38,7 +39,7 @@ const Profile = () => {
                 .eq('id', session.user.id)
                 .single()
 
-            if (error && error.code !== 'PGRST116') { // PGRST116 is 'not found' which might happen if trigger failed or clean auth
+            if (error && error.code !== 'PGRST116') {
                 console.warn(error)
             }
 
@@ -46,13 +47,45 @@ const Profile = () => {
                 setFullName(data.full_name || '')
                 setAvatarUrl(data.avatar_url || '')
             } else {
-                // Fallback to metadata if profile record missing
                 setFullName(session.user.user_metadata.full_name || '')
             }
         } catch (error) {
             alert(error.message)
         } finally {
             setLoading(false)
+        }
+    }
+
+    const uploadAvatar = async (event) => {
+        try {
+            setUploading(true)
+            if (!event.target.files || event.target.files.length === 0) {
+                throw new Error('You must select an image to upload.')
+            }
+
+            const file = event.target.files[0]
+            const fileExt = file.name.split('.').pop()
+            const fileName = `${Math.random()}.${fileExt}`
+            const filePath = `${fileName}`
+
+            const { error: uploadError } = await supabase.storage
+                .from('avatars')
+                .upload(filePath, file)
+
+            if (uploadError) {
+                throw uploadError
+            }
+
+            // Get Public URL
+            const { data } = supabase.storage
+                .from('avatars')
+                .getPublicUrl(filePath)
+
+            setAvatarUrl(data.publicUrl)
+        } catch (error) {
+            alert(error.message)
+        } finally {
+            setUploading(false)
         }
     }
 
@@ -66,14 +99,13 @@ const Profile = () => {
                 id: session.user.id,
                 full_name: fullName,
                 avatar_url: avatarUrl,
-                updated_at: new Date(),
             }
 
             const { error } = await supabase.from('profiles').upsert(updates)
 
             if (error) throw error
 
-            // Also update auth metadata for consistency in other parts of app that use user_metadata
+            // Also update auth metadata for consistency
             await supabase.auth.updateUser({
                 data: { full_name: fullName }
             })
@@ -153,22 +185,42 @@ const Profile = () => {
                             </div>
 
                             <div style={{ marginBottom: '2rem' }}>
-                                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#64748b', marginBottom: '0.5rem' }}>Avatar URL</label>
-                                <input
-                                    type="text"
-                                    value={avatarUrl}
-                                    onChange={(e) => setAvatarUrl(e.target.value)}
-                                    placeholder="https://example.com/my-photo.jpg"
-                                    style={{
-                                        width: '100%',
+                                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#64748b', marginBottom: '0.5rem' }}>Avatar Image</label>
+                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                                    <label className="btn" style={{
+                                        backgroundColor: '#f1f5f9',
+                                        color: '#475569',
+                                        border: '1px solid #e2e8f0',
+                                        cursor: uploading ? 'wait' : 'pointer',
                                         padding: '0.75rem',
                                         borderRadius: '8px',
-                                        border: '1px solid #e2e8f0',
-                                        fontSize: '0.9rem',
-                                        color: '#0f172a'
-                                    }}
-                                />
-                                <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.25rem' }}>Paste a direct link to an image (e.g., from imgur or similar).</p>
+                                        fontSize: '0.9rem'
+                                    }}>
+                                        {uploading ? 'Uploading...' : 'Upload New Photo'}
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={uploadAvatar}
+                                            disabled={uploading}
+                                            style={{ display: 'none' }}
+                                        />
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={avatarUrl}
+                                        disabled
+                                        style={{
+                                            flex: 1,
+                                            padding: '0.75rem',
+                                            borderRadius: '8px',
+                                            border: '1px solid #e2e8f0',
+                                            fontSize: '0.875rem',
+                                            color: '#94a3b8',
+                                            backgroundColor: '#f8fafc'
+                                        }}
+                                    />
+                                </div>
+                                <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.5rem' }}>Select an image to upload. It will be stored securely.</p>
                             </div>
 
                             <div style={{ display: 'flex', gap: '1rem' }}>
