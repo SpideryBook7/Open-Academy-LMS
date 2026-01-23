@@ -225,9 +225,10 @@ const Courses = () => {
                                 style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '2px solid white', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}
                                 alt="Profile"
                             />
-                            <span style={{ fontSize: '0.9rem', fontWeight: '600', color: '#0f172a' }}>
-                                {user?.user_metadata?.full_name?.split(' ')[0] || 'User'}
-                            </span>
+                            <div>
+                                <p style={{ fontSize: '0.9rem', fontWeight: '600', color: '#0f172a' }}>{user?.user_metadata?.full_name || 'User'}</p>
+                                <p style={{ fontSize: '0.8rem', color: '#64748b' }}>Student</p>
+                            </div>
                         </div>
                     </div>
                 </div>

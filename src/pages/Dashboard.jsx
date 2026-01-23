@@ -9,6 +9,9 @@ const Dashboard = () => {
     const [avatarUrl, setAvatarUrl] = useState(null)
     const [description, setDescription] = useState('')
     const [loading, setLoading] = useState(true)
+    const [events, setEvents] = useState([])
+    const [currentDate, setCurrentDate] = useState(new Date())
+    const [selectedDate, setSelectedDate] = useState(new Date())
 
     useEffect(() => {
         const checkUser = async () => {
@@ -29,6 +32,16 @@ const Dashboard = () => {
                     setAvatarUrl(data.avatar_url)
                     setDescription(data.description)
                 }
+
+                // Fetch events for mini calendar
+                const { data: eventsData } = await supabase
+                    .from('calendar_events')
+                    .select('*')
+                    .eq('user_id', session.user.id)
+
+                if (eventsData) {
+                    setEvents(eventsData.map(e => ({ ...e, date: new Date(e.start_time) })))
+                }
             }
             setLoading(false)
         }
@@ -40,6 +53,71 @@ const Dashboard = () => {
         { id: 2, title: 'Data Science Basics', progress: 32, color: '#64748b', image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=500&q=80' },
         { id: 3, title: 'Creative Writing', progress: 78, color: '#cbd5e1', image: 'https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=500&q=80' },
     ]
+
+    const changeMonth = (offset) => {
+        setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + offset, 1))
+    }
+
+    const renderMiniCalendar = () => {
+        const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate()
+        const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay()
+        let startParams = firstDay === 0 ? 6 : firstDay - 1
+
+        const days = []
+        for (let i = 0; i < startParams; i++) {
+            days.push(<span key={`empty-${i}`}></span>)
+        }
+
+        for (let day = 1; day <= daysInMonth; day++) {
+            const currentDayDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day)
+            const isToday = day === new Date().getDate() && currentDate.getMonth() === new Date().getMonth() && currentDate.getFullYear() === new Date().getFullYear()
+
+            // Check for event
+            const hasEvent = events.some(e =>
+                e.date.getDate() === day &&
+                e.date.getMonth() === currentDate.getMonth() &&
+                e.date.getFullYear() === currentDate.getFullYear()
+            )
+
+            const isSelected = selectedDate.getDate() === day && selectedDate.getMonth() === currentDate.getMonth()
+
+            days.push(
+                <span
+                    key={day}
+                    onClick={() => setSelectedDate(currentDayDate)}
+                    style={{
+                        padding: '0.25rem',
+                        backgroundColor: isSelected ? '#fffcf0' : (isToday ? '#64748b' : 'transparent'),
+                        color: isSelected ? '#334155' : (isToday ? 'white' : '#334155'),
+                        border: isSelected ? '1px solid #e2e8f0' : 'none',
+                        borderRadius: '6px',
+                        position: 'relative',
+                        fontWeight: isToday || isSelected ? 'bold' : 'normal',
+                        cursor: 'pointer'
+                    }}>
+                    {day}
+                    {hasEvent && !isToday && (
+                        <div style={{
+                            position: 'absolute',
+                            bottom: '2px',
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            width: '4px',
+                            height: '4px',
+                            borderRadius: '50%',
+                            backgroundColor: '#3b82f6'
+                        }}></div>
+                    )}
+                </span>
+            )
+        }
+        return days
+    }
+
+    const upcomingEvents = events
+        .filter(e => new Date(e.start_time) >= new Date())
+        .sort((a, b) => new Date(a.start_time) - new Date(b.start_time))
+        .slice(0, 3)
 
     if (loading) return null
 
@@ -57,10 +135,6 @@ const Dashboard = () => {
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                        <button style={{ position: 'relative', cursor: 'pointer', color: '#64748b' }}>
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
-                            <span style={{ position: 'absolute', top: '-2px', right: '-2px', width: '8px', height: '8px', backgroundColor: '#ef4444', borderRadius: '50%', border: '2px solid #f8fafc' }}></span>
-                        </button>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                             <img
                                 src={avatarUrl || `https://ui-avatars.com/api/?name=${user?.user_metadata?.full_name || 'User'}&background=random`}
@@ -71,7 +145,6 @@ const Dashboard = () => {
                                 <p style={{ fontSize: '0.9rem', fontWeight: '600', color: '#0f172a' }}>{user?.user_metadata?.full_name || 'Alex Proflum'}</p>
                                 <p style={{ fontSize: '0.8rem', color: '#64748b' }}>Student</p>
                             </div>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#94a3b8' }}><polyline points="6 9 12 15 18 9"></polyline></svg>
                         </div>
                     </div>
                 </header>
@@ -85,7 +158,6 @@ const Dashboard = () => {
                         <section>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1.5rem' }}>
                                 <h2 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#0f172a' }}>My Courses</h2>
-                                <a href="#" style={{ fontSize: '0.875rem', fontWeight: '500', color: '#64748b' }}>See all</a>
                             </div>
 
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
@@ -141,7 +213,7 @@ const Dashboard = () => {
                         <div style={{ backgroundColor: 'white', borderRadius: '20px', padding: '2rem', textAlign: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
                                 <h3 style={{ fontSize: '1.1rem', fontWeight: '600' }}>My Profile</h3>
-                                <span style={{ fontSize: '0.875rem', color: '#64748b', cursor: 'pointer' }}>Edit</span>
+                                <button onClick={() => navigate('/profile')} style={{ fontSize: '0.875rem', border: 'none', backgroundColor: 'transparent', cursor: 'pointer' }}>Edit</button>
                             </div>
                             <div style={{ marginBottom: '1rem' }}>
                                 <img
@@ -159,46 +231,33 @@ const Dashboard = () => {
                         {/* Calendar Widget (Simplified) */}
                         <section style={{ backgroundColor: 'white', borderRadius: '20px', padding: '1.5rem', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-                                <h3 style={{ fontSize: '1.1rem', fontWeight: '600' }}>Calendar</h3>
+                                <h3 style={{ fontSize: '1.1rem', fontWeight: '600' }}>{currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</h3>
                                 <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                    <span style={{ cursor: 'pointer' }}>&lt;</span>
-                                    <span style={{ cursor: 'pointer' }}>&gt;</span>
+                                    <span style={{ cursor: 'pointer' }} onClick={() => changeMonth(-1)}>&lt;</span>
+                                    <span style={{ cursor: 'pointer' }} onClick={() => changeMonth(1)}>&gt;</span>
                                 </div>
                             </div>
-                            {/* Mock Calendar Grid */}
+                            {/* Dynamic Calendar Grid */}
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.5rem', fontSize: '0.75rem', textAlign: 'center', marginBottom: '1rem', color: '#64748b' }}>
                                 <span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span><span>Su</span>
-
-                                {[...Array(30)].map((_, i) => {
-                                    const day = i + 1;
-                                    const isToday = day === 4; // Mock today
-                                    return (
-                                        <span key={i} style={{
-                                            padding: '0.25rem',
-                                            backgroundColor: isToday ? '#64748b' : 'transparent',
-                                            color: isToday ? 'white' : '#334155',
-                                            borderRadius: '6px'
-                                        }}>
-                                            {day}
-                                        </span>
-                                    )
-                                })}
+                                {renderMiniCalendar()}
                             </div>
+
+                            <h4 style={{ fontSize: '0.9rem', fontWeight: '600', marginBottom: '0.75rem', color: '#0f172a' }}>Upcoming Events</h4>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <div style={{ width: '12px', height: '12px', borderRadius: '4px', backgroundColor: '#94a3b8' }}></div>
-                                    <div style={{ flex: 1 }}>
-                                        <p style={{ fontSize: '0.8rem', fontWeight: '600' }}>Upcoming deadline 1</p>
-                                        <p style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Monday, 20 June</p>
+                                {upcomingEvents.length > 0 ? upcomingEvents.map(event => (
+                                    <div key={event.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <div style={{ width: '12px', height: '12px', borderRadius: '4px', backgroundColor: event.color }}></div>
+                                        <div style={{ flex: 1, overflow: 'hidden' }}>
+                                            <p style={{ fontSize: '0.8rem', fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{event.title}</p>
+                                            <p style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+                                                {new Date(event.start_time).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                                            </p>
+                                        </div>
                                     </div>
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <div style={{ width: '12px', height: '12px', borderRadius: '4px', backgroundColor: '#94a3b8' }}></div>
-                                    <div style={{ flex: 1 }}>
-                                        <p style={{ fontSize: '0.8rem', fontWeight: '600' }}>Upcoming deadline 2</p>
-                                        <p style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Wednesday, Online</p>
-                                    </div>
-                                </div>
+                                )) : (
+                                    <p style={{ fontSize: '0.8rem', color: '#94a3b8', fontStyle: 'italic' }}>No upcoming events.</p>
+                                )}
                             </div>
                         </section>
                     </div>

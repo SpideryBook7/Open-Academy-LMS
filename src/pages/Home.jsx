@@ -103,11 +103,6 @@ const Home = () => {
                             {loading ? 'Processing...' : (isLogin ? 'Sign In' : 'Register')}
                         </button>
 
-                        {isLogin && (
-                            <div style={{ marginTop: '1rem', textAlign: 'center' }}>
-                                <a href="#" style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Forgot password?</a>
-                            </div>
-                        )}
                     </form>
                 </div>
             </div>

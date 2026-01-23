@@ -6,6 +6,7 @@ import Sidebar from '../components/Sidebar'
 const Materials = () => {
     const navigate = useNavigate()
     const [user, setUser] = useState(null)
+    const [avatarUrl, setAvatarUrl] = useState(null)
     const [activeTab, setActiveTab] = useState('All Files')
 
     // Mock Data
@@ -27,6 +28,17 @@ const Materials = () => {
                 navigate('/')
             } else {
                 setUser(session.user)
+
+                // Fetch profile data
+                const { data } = await supabase
+                    .from('profiles')
+                    .select('avatar_url')
+                    .eq('id', session.user.id)
+                    .single()
+
+                if (data) {
+                    setAvatarUrl(data.avatar_url)
+                }
             }
         }
         getUser()
@@ -103,18 +115,14 @@ const Materials = () => {
 
                     {/* User Avatar (Mini) */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <div style={{ position: 'relative' }}>
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#64748b' }}><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
-                            <span style={{ position: 'absolute', top: 0, right: 0, width: '8px', height: '8px', backgroundColor: '#ef4444', borderRadius: '50%', border: '2px solid #f8fafc' }}></span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <img
-                                src={user?.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${user?.user_metadata?.full_name || 'User'}&background=random`}
-                                style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }}
-                                alt="Profile"
-                            />
-                            <span style={{ fontSize: '0.9rem', fontWeight: '600', color: '#0f172a' }}>{user?.user_metadata?.full_name?.split(' ')[0] || 'User'}</span>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#94a3b8' }}><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        <img
+                            src={avatarUrl || `https://ui-avatars.com/api/?name=${user?.user_metadata?.full_name || 'User'}&background=random`}
+                            style={{ width: '40px', height: '40px', borderRadius: '50%', border: '2px solid white', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', objectFit: 'cover' }}
+                            alt="Profile"
+                        />
+                        <div>
+                            <p style={{ fontSize: '0.9rem', fontWeight: '600', color: '#0f172a' }}>{user?.user_metadata?.full_name || 'User'}</p>
+                            <p style={{ fontSize: '0.8rem', color: '#64748b' }}>Student</p>
                         </div>
                     </div>
                 </div>
