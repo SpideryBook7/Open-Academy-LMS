@@ -13,6 +13,7 @@ const Dashboard = () => {
     const [events, setEvents] = useState([])
     const [currentDate, setCurrentDate] = useState(new Date())
     const [selectedDate, setSelectedDate] = useState(new Date())
+    const [myCourses, setMyCourses] = useState([]) // Real courses state
 
     useEffect(() => {
         const checkUser = async () => {
@@ -44,17 +45,42 @@ const Dashboard = () => {
                 if (eventsData) {
                     setEvents(eventsData.map(e => ({ ...e, date: new Date(e.start_time) })))
                 }
+
+                // Fetch Enrolled Courses for Dashboard
+                const { data: enrollmentData } = await supabase
+                    .from('enrollments')
+                    .select(`
+                        id,
+                        completed_at,
+                        courses (
+                            id,
+                            title,
+                            description,
+                            thumbnail_url
+                        )
+                    `)
+                    .eq('user_id', session.user.id)
+                    .limit(3) // Limit to 3 for dashboard
+
+                if (enrollmentData) {
+                    const formattedCourses = enrollmentData.map(enrollment => ({
+                        id: enrollment.courses.id,
+                        title: enrollment.courses.title,
+                        description: enrollment.courses.description,
+                        image: enrollment.courses.thumbnail_url || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
+                        progress: enrollment.completed_at ? 100 : 0,
+                        status: enrollment.completed_at ? 'Completed' : 'Active'
+                    }))
+                    setMyCourses(formattedCourses)
+                }
             }
             setLoading(false)
         }
         checkUser()
     }, [navigate])
 
-    const myCourses = [
-        { id: 1, title: 'Design Thinking', progress: 45, color: '#94a3b8', image: 'https://images.unsplash.com/photo-1558655146-d09347e0b7a9?auto=format&fit=crop&w=500&q=80' },
-        { id: 2, title: 'Data Science Basics', progress: 32, color: '#64748b', image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=500&q=80' },
-        { id: 3, title: 'Creative Writing', progress: 78, color: '#cbd5e1', image: 'https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=500&q=80' },
-    ]
+    // myCourses is now state managed
+
 
     const changeMonth = (offset) => {
         setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + offset, 1))
@@ -177,7 +203,9 @@ const Dashboard = () => {
                                                 <div style={{ width: `${course.progress}%`, height: '100%', backgroundColor: '#64748b', borderRadius: '3px' }}></div>
                                             </div>
                                         </div>
-                                        <button style={{ width: '100%', padding: '0.75rem', backgroundColor: '#94a3b8', color: 'white', border: 'none', borderRadius: '10px', fontWeight: '600', fontSize: '0.875rem', cursor: 'pointer', transition: 'background 0.2s', ':hover': { backgroundColor: '#64748b' } }}>
+                                        <button
+                                            onClick={() => navigate(`/course/${course.id}`)}
+                                            style={{ width: '100%', padding: '0.75rem', backgroundColor: '#94a3b8', color: 'white', border: 'none', borderRadius: '10px', fontWeight: '600', fontSize: '0.875rem', cursor: 'pointer', transition: 'background 0.2s', ':hover': { backgroundColor: '#64748b' } }}>
                                             Go to Course
                                         </button>
                                     </div>

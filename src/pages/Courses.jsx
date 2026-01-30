@@ -237,17 +237,19 @@ const Courses = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '2rem' }}>
                     {filteredCourses.length > 0 ? (
                         filteredCourses.map(course => (
-                            <div key={course.id} style={{
-                                backgroundColor: 'white',
-                                borderRadius: '20px',
-                                padding: '1rem',
-                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.02)',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                transition: 'transform 0.2s, box-shadow 0.2s',
-                                cursor: 'pointer',
-                                ':hover': { transform: 'translateY(-4px)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }
-                            }}>
+                            <div key={course.id}
+                                onClick={() => navigate(`/course/${course.id}`)}
+                                style={{
+                                    backgroundColor: 'white',
+                                    borderRadius: '20px',
+                                    padding: '1rem',
+                                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.02)',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    transition: 'transform 0.2s, box-shadow 0.2s',
+                                    cursor: 'pointer',
+                                    ':hover': { transform: 'translateY(-4px)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }
+                                }}>
                                 <div style={{ height: '180px', borderRadius: '16px', overflow: 'hidden', marginBottom: '1.25rem', backgroundColor: '#f1f5f9' }}>
                                     <img
                                         src={course.image}

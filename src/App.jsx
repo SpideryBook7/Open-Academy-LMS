@@ -6,6 +6,7 @@ import Calendar from './pages/Calendar'
 import Materials from './pages/Materials'
 import Profile from './pages/Profile'
 import NotFound from './pages/NotFound'
+import CourseViewer from './pages/CourseViewer'
 import PrivateRoute from './components/PrivateRoute'
 import AdminRoute from './components/AdminRoute'
 import AdminDashboard from './pages/admin/AdminDashboard'
@@ -23,6 +24,7 @@ function App() {
         <Route element={<PrivateRoute />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/courses" element={<Courses />} />
+          <Route path="/course/:id" element={<CourseViewer />} />
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/materials" element={<Materials />} />
           <Route path="/profile" element={<Profile />} />
