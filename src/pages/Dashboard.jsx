@@ -7,6 +7,7 @@ const Dashboard = () => {
     const navigate = useNavigate()
     const [user, setUser] = useState(null)
     const [avatarUrl, setAvatarUrl] = useState(null)
+    const [userRole, setUserRole] = useState(null)
     const [description, setDescription] = useState('')
     const [loading, setLoading] = useState(true)
     const [events, setEvents] = useState([])
@@ -24,13 +25,14 @@ const Dashboard = () => {
                 // Fetch profile data
                 const { data } = await supabase
                     .from('profiles')
-                    .select('avatar_url, description')
+                    .select('avatar_url, description, role')
                     .eq('id', session.user.id)
                     .single()
 
                 if (data) {
                     setAvatarUrl(data.avatar_url)
                     setDescription(data.description)
+                    setUserRole(data.role)
                 }
 
                 // Fetch events for mini calendar
@@ -143,7 +145,7 @@ const Dashboard = () => {
                             />
                             <div>
                                 <p style={{ fontSize: '0.9rem', fontWeight: '600', color: '#0f172a' }}>{user?.user_metadata?.full_name || 'Alex Proflum'}</p>
-                                <p style={{ fontSize: '0.8rem', color: '#64748b' }}>Student</p>
+                                <p style={{ fontSize: '0.8rem', color: '#64748b' }}>{userRole === 'admin' ? 'Administrator' : 'Student'}</p>
                             </div>
                         </div>
                     </div>
@@ -222,7 +224,7 @@ const Dashboard = () => {
                                     alt="Avatar"
                                 />
                                 <h3 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '0.25rem', color: '#0f172a' }}>{user?.user_metadata?.full_name || 'Alex Proflum'}</h3>
-                                <p style={{ fontSize: '0.875rem', color: '#64748b' }}>Student</p>
+                                <p style={{ fontSize: '0.875rem', color: '#64748b' }}>{userRole === 'admin' ? 'Administrator' : 'Student'} (Role: {userRole || 'Loading...'})</p>
                             </div>
                             <p style={{ fontSize: '0.875rem', color: '#94a3b8', lineHeight: '1.5' }}>
                                 {description || 'Always learning, always growing. Passionate about Design and Data.'}

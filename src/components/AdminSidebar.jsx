@@ -1,47 +1,26 @@
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { supabase } from '../lib/supabaseClient'
 
-const Sidebar = () => {
+const AdminSidebar = () => {
     const location = useLocation()
-    const [isAdmin, setIsAdmin] = useState(false)
-
-    useEffect(() => {
-        const checkRole = async () => {
-            const { data: { session } } = await supabase.auth.getSession()
-            if (session) {
-                const { data } = await supabase
-                    .from('profiles')
-                    .select('role')
-                    .eq('id', session.user.id)
-                    .single()
-
-                if (data?.role === 'admin') {
-                    setIsAdmin(true)
-                }
-            }
-        }
-        checkRole()
-    }, [])
 
     const menuItems = [
-        { name: 'Dashboard', path: '/dashboard', icon: <><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></> },
-        { name: 'Courses', path: '/courses', icon: <><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></> },
-        { name: 'Calendar', path: '/calendar', icon: <><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></> },
+        { name: 'Dashboard', path: '/admin/dashboard', icon: <><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></> },
+        { name: 'Users', path: '/admin/users', icon: <><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></> },
+        { name: 'Courses', path: '/admin/courses', icon: <><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></> },
     ]
 
     const bottomItems = [
-        ...(isAdmin ? [{ name: 'Admin Panel', path: '/admin/dashboard', icon: <><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></> }] : []),
-        { name: 'My Materials', path: '/materials', icon: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></> },
-        { name: 'Profile', path: '/profile', icon: <><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></> },
+        { name: 'Student View', path: '/dashboard', icon: <><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></> },
     ]
 
     return (
         <aside style={{
             width: '260px',
             height: '100vh',
-            backgroundColor: '#ffffff',
-            borderRight: '1px solid #f1f5f9',
+            backgroundColor: '#0f172a', // Dark theme for Admin
+            color: 'white',
+            borderRight: '1px solid #1e293b',
             padding: '2rem 1.5rem',
             position: 'fixed',
             left: 0,
@@ -50,12 +29,12 @@ const Sidebar = () => {
             flexDirection: 'column'
         }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '3.5rem' }}>
-                <div style={{ width: '32px', height: '32px', background: 'linear-gradient(45deg, #1e293b, #334155)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold' }}>L</div>
-                <span style={{ fontSize: '1.1rem', fontWeight: '600', color: '#1e293b', letterSpacing: '-0.5px' }}>LUMINA LMS</span>
+                <div style={{ width: '32px', height: '32px', backgroundColor: '#3b82f6', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold' }}>A</div>
+                <span style={{ fontSize: '1.1rem', fontWeight: '600', color: 'white', letterSpacing: '-0.5px' }}>LUMINA ADMIN</span>
             </div>
 
             <nav style={{ flex: 1 }}>
-                <ul style={{ listStyle: 'none' }}>
+                <ul style={{ listStyle: 'none', padding: 0 }}>
                     {menuItems.map((item) => {
                         const isActive = location.pathname === item.path
                         return (
@@ -68,11 +47,12 @@ const Sidebar = () => {
                                         gap: '1rem',
                                         padding: '0.875rem 1rem',
                                         borderRadius: '8px',
-                                        color: isActive ? '#1e293b' : '#64748b',
-                                        backgroundColor: isActive ? '#f1f5f9' : 'transparent',
-                                        borderLeft: isActive ? '3px solid #64748b' : '3px solid transparent',
+                                        color: isActive ? 'white' : '#94a3b8',
+                                        backgroundColor: isActive ? '#1e293b' : 'transparent',
+                                        borderLeft: isActive ? '3px solid #3b82f6' : '3px solid transparent',
                                         fontWeight: isActive ? '600' : '500',
                                         transition: 'all 0.2s',
+                                        textDecoration: 'none'
                                     }}
                                 >
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: isActive ? 1 : 0.7 }}>
@@ -87,7 +67,7 @@ const Sidebar = () => {
             </nav>
 
             <div style={{ marginTop: 'auto' }}>
-                <ul style={{ listStyle: 'none' }}>
+                <ul style={{ listStyle: 'none', padding: 0 }}>
                     {bottomItems.map((item) => (
                         <li key={item.name} style={{ marginBottom: '0.5rem' }}>
                             <Link
@@ -98,9 +78,10 @@ const Sidebar = () => {
                                     gap: '1rem',
                                     padding: '0.875rem 1rem',
                                     borderRadius: '8px',
-                                    color: '#64748b',
+                                    color: '#94a3b8',
                                     fontWeight: '500',
                                     transition: 'all 0.2s',
+                                    textDecoration: 'none'
                                 }}
                             >
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.7 }}>
@@ -116,4 +97,4 @@ const Sidebar = () => {
     )
 }
 
-export default Sidebar
+export default AdminSidebar

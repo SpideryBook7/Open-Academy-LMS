@@ -7,6 +7,10 @@ import Materials from './pages/Materials'
 import Profile from './pages/Profile'
 import NotFound from './pages/NotFound'
 import PrivateRoute from './components/PrivateRoute'
+import AdminRoute from './components/AdminRoute'
+import AdminDashboard from './pages/admin/AdminDashboard'
+import AdminUsers from './pages/admin/AdminUsers'
+import AdminCourses from './pages/admin/AdminCourses'
 import './App.css'
 
 function App() {
@@ -22,6 +26,13 @@ function App() {
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/materials" element={<Materials />} />
           <Route path="/profile" element={<Profile />} />
+        </Route>
+
+        {/* Admin Routes */}
+        <Route element={<AdminRoute />}>
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/users" element={<AdminUsers />} />
+          <Route path="/admin/courses" element={<AdminCourses />} />
         </Route>
 
         {/* 404 Catch-all */}

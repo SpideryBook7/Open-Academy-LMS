@@ -17,7 +17,18 @@ const Home = () => {
             if (isLogin) {
                 const { error } = await supabase.auth.signInWithPassword({ email, password })
                 if (error) throw error
-                navigate('/dashboard')
+                const { data: { user } } = await supabase.auth.getUser()
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('role')
+                    .eq('id', user.id)
+                    .single()
+
+                if (profile?.role === 'admin') {
+                    navigate('/admin/dashboard')
+                } else {
+                    navigate('/dashboard')
+                }
             } else {
                 const { error } = await supabase.auth.signUp({
                     email,
