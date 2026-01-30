@@ -14,7 +14,7 @@ const AdminCourses = () => {
     const [selectedCourse, setSelectedCourse] = useState(null)
     const [lessons, setLessons] = useState([])
     const [loadingLessons, setLoadingLessons] = useState(false)
-    const [newLesson, setNewLesson] = useState({ title: '', type: 'video', url: '' })
+    const [newLesson, setNewLesson] = useState({ title: '', type: 'video', url: '', description: '' })
 
     const fetchCourses = async () => {
         try {
@@ -102,7 +102,6 @@ const AdminCourses = () => {
                 .select('*')
                 .eq('course_id', courseId)
                 .order('order', { ascending: true })
-            // Note: 'order' column exists in schema. If not used, we can order by created_at.
 
             if (error) throw error
             setLessons(data || [])
@@ -119,13 +118,12 @@ const AdminCourses = () => {
         if (!selectedCourse) return
 
         try {
-            // Determine content_type based on columns available. 
-            // We assume 'content_type' column was added as per plan.
             const lessonData = {
                 course_id: selectedCourse.id,
                 title: newLesson.title,
-                video_url: newLesson.url, // Using video_url for both videos and links for now
-                content_type: newLesson.type, // Requires DB schema update
+                video_url: newLesson.url,
+                content_type: newLesson.type,
+                description: newLesson.description,
                 order: lessons.length + 1
             }
 
@@ -137,7 +135,7 @@ const AdminCourses = () => {
             if (error) throw error
 
             setLessons([...lessons, data[0]])
-            setNewLesson({ title: '', type: 'video', url: '' })
+            setNewLesson({ title: '', type: 'video', url: '', description: '' })
         } catch (error) {
             alert('Error adding content: ' + error.message)
         }
@@ -297,6 +295,15 @@ const AdminCourses = () => {
                                         style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}
                                     />
                                 </div>
+                                <div style={{ marginBottom: '1rem' }}>
+                                    <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.5rem', color: '#64748b' }}>Description</label>
+                                    <textarea
+                                        value={newLesson.description}
+                                        onChange={e => setNewLesson({ ...newLesson, description: e.target.value })}
+                                        rows="2"
+                                        style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}
+                                    />
+                                </div>
                                 <button type="submit" style={{ backgroundColor: '#0f172a', color: 'white', padding: '0.5rem 1rem', borderRadius: '6px', border: 'none', cursor: 'pointer', fontWeight: '500' }}>
                                     Add Content
                                 </button>
@@ -320,9 +327,10 @@ const AdminCourses = () => {
                                                         <span style={{ textTransform: 'uppercase', fontSize: '0.7rem', backgroundColor: '#e2e8f0', padding: '2px 6px', borderRadius: '4px', marginRight: '0.5rem' }}>
                                                             {lesson.content_type || 'video'}
                                                         </span>
-                                                        <a href={lesson.video_url} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'none' }}>
+                                                        <a href={lesson.video_url} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'none', marginRight: '0.5rem' }}>
                                                             {lesson.video_url}
                                                         </a>
+                                                        {lesson.description && <span style={{ color: '#94a3b8' }}>- {lesson.description.substring(0, 30)}...</span>}
                                                     </div>
                                                 </div>
                                                 <button

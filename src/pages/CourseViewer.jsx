@@ -8,10 +8,10 @@ const CourseViewer = () => {
     const { id } = useParams()
     const navigate = useNavigate()
     const [course, setCourse] = useState(null)
-    const [lessons, setLessons] = useState([])
+    const [lessons, setLessons] = useState([]) // All content
     const [activeLesson, setActiveLesson] = useState(null)
     const [loading, setLoading] = useState(true)
-    const [sidebarOpen, setSidebarOpen] = useState(true)
+    const [activeTab, setActiveTab] = useState('lessons') // 'lessons' (videos) or 'materials' (links)
 
     useEffect(() => {
         const fetchCourseDetails = async () => {
@@ -34,10 +34,14 @@ const CourseViewer = () => {
                     .order('order', { ascending: true })
 
                 if (lessonsError) throw lessonsError
-                setLessons(lessonsData)
+                setLessons(lessonsData || [])
 
+                // Set first video as active if available
                 if (lessonsData && lessonsData.length > 0) {
-                    setActiveLesson(lessonsData[0])
+                    const firstVideo = lessonsData.find(l => l.content_type === 'video' || !l.content_type)
+                    if (firstVideo) {
+                        setActiveLesson(firstVideo)
+                    }
                 }
 
             } catch (error) {
@@ -57,6 +61,10 @@ const CourseViewer = () => {
         setActiveLesson(lesson)
     }
 
+    // Filter content
+    const videoLessons = lessons.filter(l => l.content_type === 'video' || !l.content_type)
+    const materialResources = lessons.filter(l => l.content_type === 'link')
+
     if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#f8fafc', color: '#64748b' }}>Loading Course...</div>
 
     if (!course) return null
@@ -75,7 +83,6 @@ const CourseViewer = () => {
                         </button>
                         <h1 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#0f172a', margin: 0 }}>{course.title}</h1>
                     </div>
-                    {/* Toggle Playlist Button (Mobile/Immersive view) could go here */}
                 </div>
 
                 <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
@@ -85,6 +92,7 @@ const CourseViewer = () => {
 
                         {activeLesson ? (
                             <div style={{ maxWidth: '1000px', width: '100%', margin: '0 auto' }}>
+                                {/* Video Player */}
                                 <div style={{
                                     aspectRatio: '16/9',
                                     backgroundColor: 'black',
@@ -93,92 +101,158 @@ const CourseViewer = () => {
                                     boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
                                     marginBottom: '2rem'
                                 }}>
-                                    {activeLesson.content_type === 'link' ? (
-                                        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', color: 'white', gap: '1rem' }}>
-                                            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
-                                                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
-                                                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
-                                            </svg>
-                                            <p style={{ fontSize: '1.2rem' }}>External Resource</p>
-                                            <a
-                                                href={activeLesson.video_url}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                style={{
-                                                    padding: '0.75rem 1.5rem',
-                                                    backgroundColor: '#3b82f6',
-                                                    color: 'white',
-                                                    textDecoration: 'none',
-                                                    borderRadius: '8px',
-                                                    fontWeight: '600'
-                                                }}
-                                            >
-                                                Open Link
-                                            </a>
-                                        </div>
-                                    ) : (
-                                        <ReactPlayer
-                                            url={activeLesson.video_url}
-                                            width="100%"
-                                            height="100%"
-                                            controls
-                                            playing={false}
-                                        />
-                                    )}
+                                    <ReactPlayer
+                                        url={activeLesson.video_url}
+                                        width="100%"
+                                        height="100%"
+                                        controls={true}
+                                        playing={true} // Auto-play when switched
+                                        config={{
+                                            youtube: {
+                                                playerVars: { showinfo: 1 }
+                                            }
+                                        }}
+                                    />
                                 </div>
 
-                                <div>
-                                    <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#0f172a', marginBottom: '0.5rem' }}>{activeLesson.title}</h2>
+                                {/* Title & Instructor */}
+                                <div style={{ marginBottom: '1.5rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '1.5rem' }}>
+                                    <h2 style={{ fontSize: '1.75rem', fontWeight: '700', color: '#0f172a', marginBottom: '0.5rem' }}>{activeLesson.title}</h2>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', color: '#64748b', fontSize: '0.9rem' }}>
                                         <span>Instructor: {course.instructor?.full_name || 'Staff'}</span>
-                                        {/* Future: Add 'Complete' button here */}
                                     </div>
+                                </div>
+
+                                {/* Description Box (Yellow area requested) */}
+                                <div style={{ backgroundColor: '#fff', borderRadius: '12px', padding: '1.5rem', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                                    <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '0.75rem', color: '#334155' }}>Description</h3>
+                                    <p style={{ color: '#475569', lineHeight: '1.6', whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+                                        {activeLesson.description || 'No description available for this lesson.'}
+                                    </p>
                                 </div>
                             </div>
                         ) : (
                             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: '#94a3b8' }}>
-                                Select a lesson to start
+                                {videoLessons.length > 0 ? 'Select a video to start.' : 'No videos available in this course.'}
                             </div>
                         )}
                     </div>
 
-                    {/* Right Sidebar (Playlist) */}
+                    {/* Right Sidebar (Tabs & Playlist) */}
                     <div style={{ width: '350px', backgroundColor: 'white', borderLeft: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column' }}>
-                        <div style={{ padding: '1.5rem', borderBottom: '1px solid #f1f5f9' }}>
-                            <h3 style={{ fontSize: '1.1rem', fontWeight: '600', color: '#0f172a' }}>Course Content</h3>
-                            <p style={{ fontSize: '0.8rem', color: '#64748b' }}>{lessons.length} items</p>
+
+                        {/* Tabs */}
+                        <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0' }}>
+                            <button
+                                onClick={() => setActiveTab('lessons')}
+                                style={{
+                                    flex: 1,
+                                    padding: '1rem',
+                                    border: 'none',
+                                    backgroundColor: activeTab === 'lessons' ? 'white' : '#f8fafc',
+                                    borderBottom: activeTab === 'lessons' ? '3px solid #3b82f6' : '3px solid transparent',
+                                    color: activeTab === 'lessons' ? '#0f172a' : '#64748b',
+                                    fontWeight: '600',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Lessons ({videoLessons.length})
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('materials')}
+                                style={{
+                                    flex: 1,
+                                    padding: '1rem',
+                                    border: 'none',
+                                    backgroundColor: activeTab === 'materials' ? 'white' : '#f8fafc',
+                                    borderBottom: activeTab === 'materials' ? '3px solid #3b82f6' : '3px solid transparent',
+                                    color: activeTab === 'materials' ? '#0f172a' : '#64748b',
+                                    fontWeight: '600',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Materials ({materialResources.length})
+                            </button>
                         </div>
 
+                        {/* List Content */}
                         <div style={{ flex: 1, overflowY: 'auto' }}>
-                            {lessons.map((lesson, index) => (
-                                <div
-                                    key={lesson.id}
-                                    onClick={() => handleLessonClick(lesson)}
-                                    style={{
-                                        padding: '1rem 1.5rem',
-                                        borderBottom: '1px solid #f1f5f9',
-                                        cursor: 'pointer',
-                                        backgroundColor: activeLesson?.id === lesson.id ? '#f0f9ff' : 'white',
-                                        borderLeft: activeLesson?.id === lesson.id ? '4px solid #3b82f6' : '4px solid transparent',
-                                        transition: 'background 0.2s'
-                                    }}
-                                >
-                                    <div style={{ fontSize: '0.9rem', fontWeight: '600', color: activeLesson?.id === lesson.id ? '#0f172a' : '#334155', marginBottom: '0.25rem' }}>
-                                        {index + 1}. {lesson.title}
-                                    </div>
-                                    <div style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        {lesson.content_type === 'link' ? (
-                                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                🔗 Link
-                                            </span>
-                                        ) : (
-                                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                🎥 Video
-                                            </span>
-                                        )}
-                                    </div>
+                            {activeTab === 'lessons' ? (
+                                <div>
+                                    {videoLessons.map((lesson, index) => (
+                                        <div
+                                            key={lesson.id}
+                                            onClick={() => handleLessonClick(lesson)}
+                                            style={{
+                                                padding: '1rem 1.5rem',
+                                                borderBottom: '1px solid #f1f5f9',
+                                                cursor: 'pointer',
+                                                backgroundColor: activeLesson?.id === lesson.id ? '#f0f9ff' : 'white',
+                                                borderLeft: activeLesson?.id === lesson.id ? '4px solid #3b82f6' : '4px solid transparent',
+                                                transition: 'background 0.2s'
+                                            }}
+                                        >
+                                            <div style={{ fontSize: '0.9rem', fontWeight: '600', color: activeLesson?.id === lesson.id ? '#0f172a' : '#334155', marginBottom: '0.25rem' }}>
+                                                {index + 1}. {lesson.title}
+                                            </div>
+                                            <div style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>🎥 Video</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {videoLessons.length === 0 && (
+                                        <div style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.9rem' }}>
+                                            No video lessons found.
+                                        </div>
+                                    )}
                                 </div>
-                            ))}
+                            ) : (
+                                <div>
+                                    {materialResources.map((resource, index) => (
+                                        <div
+                                            key={resource.id}
+                                            style={{
+                                                padding: '1rem 1.5rem',
+                                                borderBottom: '1px solid #f1f5f9',
+                                                backgroundColor: 'white'
+                                            }}
+                                        >
+                                            <div style={{ fontSize: '0.9rem', fontWeight: '600', color: '#334155', marginBottom: '0.5rem' }}>
+                                                {resource.title}
+                                            </div>
+                                            {resource.description && (
+                                                <p style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '0.5rem' }}>
+                                                    {resource.description}
+                                                </p>
+                                            )}
+                                            <a
+                                                href={resource.video_url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                style={{
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: '0.5rem',
+                                                    padding: '0.5rem 1rem',
+                                                    backgroundColor: '#f1f5f9',
+                                                    color: '#3b82f6',
+                                                    textDecoration: 'none',
+                                                    borderRadius: '6px',
+                                                    fontSize: '0.85rem',
+                                                    fontWeight: '500'
+                                                }}
+                                            >
+                                                🔗 Open Link
+                                            </a>
+                                        </div>
+                                    ))}
+                                    {materialResources.length === 0 && (
+                                        <div style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.9rem' }}>
+                                            No materials found.
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
 
