@@ -7,7 +7,7 @@ const AdminCourses = () => {
     const [courses, setCourses] = useState([])
     const [loading, setLoading] = useState(true)
     const [showCreateModal, setShowCreateModal] = useState(false)
-    const [newCourse, setNewCourse] = useState({ title: '', description: '', thumbnail_url: '' })
+    const [newCourse, setNewCourse] = useState({ title: '', description: '', thumbnail_url: '', instructor_name: '', instructor_avatar: '' })
 
     // Content/Lesson State
     const [showContentModal, setShowContentModal] = useState(false)
@@ -53,7 +53,9 @@ const AdminCourses = () => {
                         title: newCourse.title,
                         description: newCourse.description,
                         thumbnail_url: newCourse.thumbnail_url || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
-                        instructor_id: session.user.id
+                        instructor_id: session.user.id,
+                        instructor_name: newCourse.instructor_name,
+                        instructor_avatar: newCourse.instructor_avatar
                     }
                 ])
                 .select()
@@ -62,7 +64,7 @@ const AdminCourses = () => {
 
             setCourses([data[0], ...courses]) // Add to UI
             setShowCreateModal(false)
-            setNewCourse({ title: '', description: '', thumbnail_url: '' })
+            setNewCourse({ title: '', description: '', thumbnail_url: '', instructor_name: '', instructor_avatar: '' })
         } catch (error) {
             alert('Error creating course: ' + error.message)
         }
@@ -116,6 +118,15 @@ const AdminCourses = () => {
     const handleAddLesson = async (e) => {
         e.preventDefault()
         if (!selectedCourse) return
+
+        // Basic validation for URL
+        if (newLesson.type === 'video') {
+            const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.?be)\/.+$/
+            if (!youtubeRegex.test(newLesson.url)) {
+                alert('Please enter a valid YouTube URL.')
+                return
+            }
+        }
 
         try {
             const lessonData = {
@@ -183,7 +194,7 @@ const AdminCourses = () => {
                                     {course.description}
                                 </p>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: '#94a3b8', marginBottom: '1rem' }}>
-                                    <span>Instructor: {course.instructor?.full_name || 'Admin'}</span>
+                                    <span>Instructor: {course.instructor_name || course.instructor?.full_name || 'Admin'}</span>
                                 </div>
                                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                                     <button
@@ -230,12 +241,32 @@ const AdminCourses = () => {
                                         style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}
                                     />
                                 </div>
-                                <div style={{ marginBottom: '1.5rem' }}>
+                                <div style={{ marginBottom: '1rem' }}>
                                     <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Thumbnail URL</label>
                                     <input
                                         type="text"
                                         value={newCourse.thumbnail_url}
                                         onChange={e => setNewCourse({ ...newCourse, thumbnail_url: e.target.value })}
+                                        placeholder="https://..."
+                                        style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                                    />
+                                </div>
+                                <div style={{ marginBottom: '1rem' }}>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Instructor Name (Optional)</label>
+                                    <input
+                                        type="text"
+                                        value={newCourse.instructor_name}
+                                        onChange={e => setNewCourse({ ...newCourse, instructor_name: e.target.value })}
+                                        placeholder="e.g. Dr. Jane Doe"
+                                        style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                                    />
+                                </div>
+                                <div style={{ marginBottom: '1.5rem' }}>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Instructor Avatar URL (Optional)</label>
+                                    <input
+                                        type="text"
+                                        value={newCourse.instructor_avatar}
+                                        onChange={e => setNewCourse({ ...newCourse, instructor_avatar: e.target.value })}
                                         placeholder="https://..."
                                         style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}
                                     />

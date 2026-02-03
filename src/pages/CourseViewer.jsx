@@ -61,6 +61,16 @@ const CourseViewer = () => {
         setActiveLesson(lesson)
     }
 
+    // Helper to get YouTube ID
+    const getYouTubeId = (url) => {
+        if (!url) return null;
+        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+        const match = url.match(regExp);
+        return (match && match[2].length === 11) ? match[2] : null;
+    }
+
+    const videoId = activeLesson ? getYouTubeId(activeLesson.video_url) : null;
+
     // Filter content
     const videoLessons = lessons.filter(l => l.content_type === 'video' || !l.content_type)
     const materialResources = lessons.filter(l => l.content_type === 'link')
@@ -101,25 +111,37 @@ const CourseViewer = () => {
                                     boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
                                     marginBottom: '2rem'
                                 }}>
-                                    <ReactPlayer
-                                        url={activeLesson.video_url}
-                                        width="100%"
-                                        height="100%"
-                                        controls={true}
-                                        playing={true} // Auto-play when switched
-                                        config={{
-                                            youtube: {
-                                                playerVars: { showinfo: 1 }
-                                            }
-                                        }}
-                                    />
+                                    {videoId ? (
+                                        <iframe
+                                            width="100%"
+                                            height="100%"
+                                            src={`https://www.youtube.com/embed/${videoId}`}
+                                            title={activeLesson.title}
+                                            frameBorder="0"
+                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                            allowFullScreen
+                                        ></iframe>
+                                    ) : (
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'white' }}>
+                                            <p>Invalid Video URL</p>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Title & Instructor */}
                                 <div style={{ marginBottom: '1.5rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '1.5rem' }}>
                                     <h2 style={{ fontSize: '1.75rem', fontWeight: '700', color: '#0f172a', marginBottom: '0.5rem' }}>{activeLesson.title}</h2>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', color: '#64748b', fontSize: '0.9rem' }}>
-                                        <span>Instructor: {course.instructor?.full_name || 'Staff'}</span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#64748b', fontSize: '0.9rem' }}>
+                                        <div style={{ width: '32px', height: '32px', borderRadius: '50%', overflow: 'hidden', backgroundColor: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            {course.instructor_avatar ? (
+                                                <img src={course.instructor_avatar} alt="Instructor" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            ) : (
+                                                <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#64748b' }}>
+                                                    {(course.instructor_name || course.instructor?.full_name || 'S').charAt(0).toUpperCase()}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <span>{course.instructor_name || course.instructor?.full_name || 'Staff'}</span>
                                     </div>
                                 </div>
 

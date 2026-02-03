@@ -26,7 +26,12 @@ function AdminUsers() {
         setLoading(true);
         const { data, error } = await supabase
             .from('profiles')
-            .select('*')
+            .select(`
+                *,
+                enrollments (
+                    course_id
+                )
+            `)
             .order('created_at', { ascending: false });
 
         if (error) {
@@ -118,7 +123,7 @@ function AdminUsers() {
                 setShowEnrollModal(false);
                 setSelectedUser(null);
                 setSelectedCourse('');
-                // Optionally refresh user list or enrollment count if displayed
+                fetchUsers(); // Refresh to show new enrollment
             }
         } catch (error) {
             alert('Error enrolling user: ' + error.message);
@@ -132,6 +137,12 @@ function AdminUsers() {
     (user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.email?.toLowerCase().includes(searchTerm.toLowerCase()))
     )
+
+    // Helper to get course title
+    const getCourseTitle = (courseId) => {
+        const course = courses.find(c => c.id === courseId);
+        return course ? course.title : 'Unknown Course';
+    }
 
     return (
         <div style={{ backgroundColor: '#f1f5f9', minHeight: '100vh', display: 'flex' }}>
@@ -185,25 +196,40 @@ function AdminUsers() {
                                         <span style={{ fontWeight: '600', color: '#0f172a' }}>{user.full_name || 'Unknown'}</span>
                                     </td>
                                     <td style={{ padding: '1rem' }}>
-                                        <button
-                                            onClick={() => {
-                                                setSelectedUser(user)
-                                                setShowEnrollModal(true)
-                                            }}
-                                            style={{
-                                                padding: '0.4rem 0.8rem',
-                                                fontSize: '0.8rem',
-                                                backgroundColor: '#e0f2fe',
-                                                color: '#0284c7',
-                                                border: 'none',
-                                                borderRadius: '6px',
-                                                cursor: 'pointer',
-                                                fontWeight: '600',
-                                                whiteSpace: 'nowrap'
-                                            }}
-                                        >
-                                            + Enroll
-                                        </button>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'flex-start' }}>
+                                            {user.enrollments && user.enrollments.map((enrollment, idx) => (
+                                                <span key={idx} style={{
+                                                    fontSize: '0.75rem',
+                                                    backgroundColor: '#f1f5f9',
+                                                    padding: '2px 8px',
+                                                    borderRadius: '4px',
+                                                    color: '#475569',
+                                                    border: '1px solid #e2e8f0'
+                                                }}>
+                                                    {getCourseTitle(enrollment.course_id)}
+                                                </span>
+                                            ))}
+                                            <button
+                                                onClick={() => {
+                                                    setSelectedUser(user)
+                                                    setShowEnrollModal(true)
+                                                }}
+                                                style={{
+                                                    padding: '0.4rem 0.8rem',
+                                                    fontSize: '0.8rem',
+                                                    backgroundColor: '#e0f2fe',
+                                                    color: '#0284c7',
+                                                    border: 'none',
+                                                    borderRadius: '6px',
+                                                    cursor: 'pointer',
+                                                    fontWeight: '600',
+                                                    whiteSpace: 'nowrap',
+                                                    marginTop: '0.25rem'
+                                                }}
+                                            >
+                                                + Enroll
+                                            </button>
+                                        </div>
                                     </td>
                                     <td style={{ padding: '1rem', color: '#64748b' }}>{user.email}</td>
                                     <td style={{ padding: '1rem' }}>
@@ -214,14 +240,13 @@ function AdminUsers() {
                                                 padding: '0.5rem',
                                                 borderRadius: '6px',
                                                 border: '1px solid #e2e8f0',
-                                                backgroundColor: user.role === 'admin' ? '#eff6ff' : user.role === 'instructor' ? '#f0fdf4' : 'white',
-                                                color: user.role === 'admin' ? '#1d4ed8' : user.role === 'instructor' ? '#15803d' : '#334155',
+                                                backgroundColor: user.role === 'admin' ? '#eff6ff' : 'white',
+                                                color: user.role === 'admin' ? '#1d4ed8' : '#334155',
                                                 fontWeight: '600',
                                                 fontSize: '0.875rem'
                                             }}
                                         >
                                             <option value="student">Student</option>
-                                            <option value="instructor">Instructor</option>
                                             <option value="admin">Admin</option>
                                         </select>
                                     </td>

@@ -40,36 +40,46 @@ const Courses = () => {
                 }
 
                 // 1. Fetch Enrolled Courses
-                // We join enrollments with courses
-                const { data: enrollmentData, error } = await supabase
+                // Fetch enrollments first, then courses (avoiding FK issue)
+                const { data: enrollmentData, error: enrollmentError } = await supabase
                     .from('enrollments')
-                    .select(`
-                        id,
-                        completed_at,
-                        courses (
-                            id,
-                            title,
-                            description,
-                            thumbnail_url
-                        )
-                    `)
+                    .select('id, course_id')
                     .eq('user_id', session.user.id)
 
-                if (error) {
-                    // If table doesn't exist or other error, fallback to mock/empty
-                    console.warn("Error fetching enrollments:", error)
+                if (enrollmentError) {
+                    console.warn("Error fetching enrollments:", enrollmentError)
                 }
 
                 if (enrollmentData && enrollmentData.length > 0) {
+                    const courseIds = enrollmentData.map(e => e.course_id)
+
+                    const { data: coursesData, error: coursesError } = await supabase
+                        .from('courses')
+                        .select('id, title, description, thumbnail_url')
+                        .in('id', courseIds)
+
+                    if (coursesError) console.error("Error fetching course details:", coursesError)
+
+                    const coursesMap = (coursesData || []).reduce((acc, course) => {
+                        acc[course.id] = course;
+                        return acc;
+                    }, {});
+
                     // Transform data
-                    const formattedCourses = enrollmentData.map(enrollment => ({
-                        id: enrollment.courses.id,
-                        title: enrollment.courses.title,
-                        description: enrollment.courses.description,
-                        image: enrollment.courses.thumbnail_url || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
-                        progress: enrollment.completed_at ? 100 : Math.floor(Math.random() * 80) + 10, // Mock progress for now if not tracked lesson by lesson
-                        status: enrollment.completed_at ? 'Completed' : 'Active'
-                    }))
+                    const formattedCourses = enrollmentData.map(enrollment => {
+                        const course = coursesMap[enrollment.course_id];
+                        if (!course) return null;
+
+                        return {
+                            id: course.id,
+                            title: course.title,
+                            description: course.description,
+                            image: course.thumbnail_url || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
+                            progress: Math.floor(Math.random() * 80) + 10,
+                            status: 'Active'
+                        }
+                    }).filter(Boolean)
+
                     setCourses(formattedCourses)
                 } else {
                     // If no enrollments, maybe fetch all courses (Catalog view) 
