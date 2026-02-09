@@ -3,41 +3,28 @@ import { supabase } from '../lib/supabaseClient'
 import { useNavigate } from 'react-router-dom'
 
 const Home = () => {
-    const [isLogin, setIsLogin] = useState(true)
     const [loading, setLoading] = useState(false)
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
-    const [fullName, setFullName] = useState('')
     const navigate = useNavigate()
 
     const handleAuth = async (e) => {
         e.preventDefault()
         setLoading(true)
         try {
-            if (isLogin) {
-                const { error } = await supabase.auth.signInWithPassword({ email, password })
-                if (error) throw error
-                const { data: { user } } = await supabase.auth.getUser()
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('role')
-                    .eq('id', user.id)
-                    .single()
+            const { error } = await supabase.auth.signInWithPassword({ email, password })
+            if (error) throw error
+            const { data: { user } } = await supabase.auth.getUser()
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('role')
+                .eq('id', user.id)
+                .single()
 
-                if (profile?.role === 'admin') {
-                    navigate('/admin/dashboard')
-                } else {
-                    navigate('/dashboard')
-                }
+            if (profile?.role === 'admin') {
+                navigate('/admin/dashboard')
             } else {
-                const { error } = await supabase.auth.signUp({
-                    email,
-                    password,
-                    options: { data: { full_name: fullName } }
-                })
-                if (error) throw error
-                alert('Registration successful! Check your email.')
-                setIsLogin(true)
+                navigate('/dashboard')
             }
         } catch (error) {
             alert(error.message)
@@ -56,35 +43,12 @@ const Home = () => {
                         <span style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>LUMINA LMS</span>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '2rem', marginBottom: '2rem', borderBottom: '1px solid var(--border-color)' }}>
-                        <button
-                            className={`toggle-btn ${isLogin ? 'active' : ''}`}
-                            onClick={() => setIsLogin(true)}
-                        >
-                            Sign In
-                        </button>
-                        <button
-                            className={`toggle-btn ${!isLogin ? 'active' : ''}`}
-                            onClick={() => setIsLogin(false)}
-                        >
-                            Register
-                        </button>
+                    <div style={{ marginBottom: '2rem' }}>
+                        <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#0f172a' }}>Sign In</h2>
+                        <p style={{ color: '#64748b' }}>Welcome back! Please enter your details.</p>
                     </div>
 
                     <form onSubmit={handleAuth} style={{ animation: 'fadeIn 0.3s ease' }}>
-                        {!isLogin && (
-                            <div style={{ marginBottom: '1rem', animation: 'slideIn 0.3s ease' }}>
-                                <label style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--text-secondary)' }}>Full Name</label>
-                                <input
-                                    type="text"
-                                    className="form-input"
-                                    value={fullName}
-                                    onChange={(e) => setFullName(e.target.value)}
-                                    placeholder="John Doe"
-                                    required={!isLogin}
-                                />
-                            </div>
-                        )}
 
                         <div style={{ marginBottom: '1rem' }}>
                             <label style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--text-secondary)' }}>Email</label>
@@ -111,7 +75,7 @@ const Home = () => {
                         </div>
 
                         <button type="submit" className="btn-primary" disabled={loading}>
-                            {loading ? 'Processing...' : (isLogin ? 'Sign In' : 'Register')}
+                            {loading ? 'Processing...' : 'Sign In'}
                         </button>
 
                     </form>

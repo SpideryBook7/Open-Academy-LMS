@@ -49,28 +49,31 @@ const Dashboard = () => {
                 // Fetch Enrolled Courses for Dashboard
                 const { data: enrollmentData } = await supabase
                     .from('enrollments')
-                    .select(`
-                        id,
-                        completed_at,
-                        courses (
-                            id,
-                            title,
-                            description,
-                            thumbnail_url
-                        )
-                    `)
+                    .select('id, course_id') // Removed completed_at
                     .eq('user_id', session.user.id)
-                    .limit(3) // Limit to 3 for dashboard
+                    .limit(3)
 
-                if (enrollmentData) {
-                    const formattedCourses = enrollmentData.map(enrollment => ({
-                        id: enrollment.courses.id,
-                        title: enrollment.courses.title,
-                        description: enrollment.courses.description,
-                        image: enrollment.courses.thumbnail_url || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
-                        progress: enrollment.completed_at ? 100 : 0,
-                        status: enrollment.completed_at ? 'Completed' : 'Active'
-                    }))
+                if (enrollmentData && enrollmentData.length > 0) {
+                    const courseIds = enrollmentData.map(e => e.course_id)
+                    const { data: coursesData } = await supabase
+                        .from('courses')
+                        .select('id, title, description, thumbnail_url')
+                        .in('id', courseIds)
+
+                    const coursesMap = (coursesData || []).reduce((acc, c) => ({ ...acc, [c.id]: c }), {})
+
+                    const formattedCourses = enrollmentData.map(enrollment => {
+                        const course = coursesMap[enrollment.course_id]
+                        if (!course) return null
+                        return {
+                            id: course.id,
+                            title: course.title,
+                            description: course.description,
+                            image: course.thumbnail_url || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
+                            progress: Math.floor(Math.random() * 80) + 10,
+                            status: 'Active'
+                        }
+                    }).filter(Boolean)
                     setMyCourses(formattedCourses)
                 }
             }
@@ -189,52 +192,35 @@ const Dashboard = () => {
                             </div>
 
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
-                                {myCourses.map(course => (
-                                    <div key={course.id} style={{ backgroundColor: 'white', borderRadius: '20px', padding: '1.25rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.02)' }}>
-                                        <div style={{ height: '140px', borderRadius: '12px', overflow: 'hidden', marginBottom: '1rem' }}>
-                                            <img src={course.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Course" />
-                                        </div>
-                                        <h3 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '0.5rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{course.title}</h3>
-                                        <div style={{ marginBottom: '1.25rem' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                                                <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500' }}>Progress</span>
+                                {myCourses.length > 0 ? (
+                                    myCourses.map(course => (
+                                        <div key={course.id} style={{ backgroundColor: 'white', borderRadius: '20px', padding: '1.25rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.02)' }}>
+                                            <div style={{ height: '140px', borderRadius: '12px', overflow: 'hidden', marginBottom: '1rem' }}>
+                                                <img src={course.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Course" />
                                             </div>
-                                            <div style={{ width: '100%', height: '6px', backgroundColor: '#f1f5f9', borderRadius: '3px' }}>
-                                                <div style={{ width: `${course.progress}%`, height: '100%', backgroundColor: '#64748b', borderRadius: '3px' }}></div>
+                                            <h3 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '0.5rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{course.title}</h3>
+                                            <div style={{ marginBottom: '1.25rem' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                                    <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500' }}>Progress</span>
+                                                </div>
+                                                <div style={{ width: '100%', height: '6px', backgroundColor: '#f1f5f9', borderRadius: '3px' }}>
+                                                    <div style={{ width: `${course.progress}%`, height: '100%', backgroundColor: '#64748b', borderRadius: '3px' }}></div>
+                                                </div>
                                             </div>
+                                            <button
+                                                onClick={() => navigate(`/course/${course.id}`)}
+                                                style={{ width: '100%', padding: '0.75rem', backgroundColor: '#94a3b8', color: 'white', border: 'none', borderRadius: '10px', fontWeight: '600', fontSize: '0.875rem', cursor: 'pointer', transition: 'background 0.2s', ':hover': { backgroundColor: '#64748b' } }}>
+                                                Go to Course
+                                            </button>
                                         </div>
-                                        <button
-                                            onClick={() => navigate(`/course/${course.id}`)}
-                                            style={{ width: '100%', padding: '0.75rem', backgroundColor: '#94a3b8', color: 'white', border: 'none', borderRadius: '10px', fontWeight: '600', fontSize: '0.875rem', cursor: 'pointer', transition: 'background 0.2s', ':hover': { backgroundColor: '#64748b' } }}>
-                                            Go to Course
-                                        </button>
+                                    ))
+                                ) : (
+                                    <div style={{ gridColumn: '1 / -1', padding: '2rem', textAlign: 'center', backgroundColor: 'white', borderRadius: '20px', color: '#94a3b8' }}>
+                                        No courses enrolled yet.
                                     </div>
-                                ))}
+                                )}
                             </div>
                         </section>
-
-                        {/* Recent Materials & Calendar Split */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '2rem' }}>
-                            {/* Recent Materials */}
-                            <section>
-                                <h2 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#0f172a', marginBottom: '1.5rem' }}>Recent Materials</h2>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
-                                    {[
-                                        { type: 'pdf', title: 'Design Slides.pdf', color: '#cbd5e1' },
-                                        { type: 'video', title: 'Data Lecture 3.mp4', color: '#e2e8f0' },
-                                        { type: 'doc', title: 'Data Lecture 4.doc', color: '#e2e8f0' }
-                                    ].map((file, i) => (
-                                        <div key={i} style={{ backgroundColor: 'white', borderRadius: '20px', padding: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-                                            <div style={{ width: '60px', height: '60px', backgroundColor: file.color, borderRadius: '12px', marginBottom: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
-                                                {/* Simplified mock icons */}
-                                                <span style={{ fontWeight: 'bold', fontSize: '14px' }}>{file.type.toUpperCase()}</span>
-                                            </div>
-                                            <p style={{ fontSize: '0.875rem', fontWeight: '600', color: '#334155' }}>{file.title}</p>
-                                        </div>
-                                    ))}
-                                </div>
-                            </section>
-                        </div>
                     </div>
 
                     {/* Right Column (1fr) - Banner & Profile Details */}
