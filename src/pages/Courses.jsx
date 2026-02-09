@@ -82,32 +82,8 @@ const Courses = () => {
 
                     setCourses(formattedCourses)
                 } else {
-                    // If no enrollments, maybe fetch all courses (Catalog view) 
-                    // or just show empty state/mock data for demonstration
-                    const { data: allCourses } = await supabase.from('courses').select('*')
-
-                    if (allCourses && allCourses.length > 0) {
-                        // Show all courses as "Active" for demo purposes
-                        const formattedCourses = allCourses.map(course => ({
-                            id: course.id,
-                            title: course.title,
-                            description: course.description,
-                            image: course.thumbnail_url || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
-                            progress: 0,
-                            status: 'Active'
-                        }))
-                        setCourses(formattedCourses)
-                    } else {
-                        // Fallback Mock Data if DB is empty
-                        setCourses([
-                            { id: 1, title: 'Design Thinking', progress: 45, status: 'Active', image: 'https://images.unsplash.com/photo-1558655146-d09347e0b7a9?auto=format&fit=crop&w=500&q=80' },
-                            { id: 2, title: 'Data Science Basics', progress: 32, status: 'Active', image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=500&q=80' },
-                            { id: 3, title: 'Creative Writing', progress: 78, status: 'Active', image: 'https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=500&q=80' },
-                            { id: 4, title: 'Marketing Fundamentals', progress: 20, status: 'Active', image: 'https://images.unsplash.com/photo-1557838923-2985c318be48?auto=format&fit=crop&w=500&q=80' },
-                            { id: 5, title: 'Financial Accounting', progress: 90, status: 'Completed', image: 'https://images.unsplash.com/photo-1554224155-984061941811?auto=format&fit=crop&w=500&q=80' },
-                            { id: 6, title: 'Web Development', progress: 10, status: 'Active', image: 'https://images.unsplash.com/photo-1547658719-da2b51169166?auto=format&fit=crop&w=500&q=80' },
-                        ])
-                    }
+                    // No enrollments = no courses to show
+                    setCourses([])
                 }
 
             } catch (error) {

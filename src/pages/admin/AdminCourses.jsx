@@ -119,11 +119,18 @@ const AdminCourses = () => {
         e.preventDefault()
         if (!selectedCourse) return
 
-        // Basic validation for URL
+        // Basic validation
         if (newLesson.type === 'video') {
             const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.?be)\/.+$/
             if (!youtubeRegex.test(newLesson.url)) {
                 alert('Please enter a valid YouTube URL.')
+                return
+            }
+        } else if (newLesson.type === 'quiz') {
+            try {
+                JSON.parse(newLesson.url)
+            } catch (e) {
+                alert('Invalid JSON format for Quiz. Please check your syntax.')
                 return
             }
         }
@@ -312,20 +319,42 @@ const AdminCourses = () => {
                                         >
                                             <option value="video">Video (YouTube)</option>
                                             <option value="link">External Link</option>
+                                            <option value="quiz">Quiz</option>
                                         </select>
                                     </div>
                                 </div>
-                                <div style={{ marginBottom: '1rem' }}>
-                                    <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.5rem', color: '#64748b' }}>URL</label>
-                                    <input
-                                        type="url"
-                                        required
-                                        value={newLesson.url}
-                                        onChange={e => setNewLesson({ ...newLesson, url: e.target.value })}
-                                        placeholder="https://..."
-                                        style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}
-                                    />
-                                </div>
+
+                                {newLesson.type === 'quiz' ? (
+                                    <div style={{ marginBottom: '1rem' }}>
+                                        <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.5rem', color: '#64748b' }}>Quiz JSON Data</label>
+                                        <div style={{ marginBottom: '0.5rem', fontSize: '0.75rem', color: '#64748b', fontFamily: 'monospace', backgroundColor: '#e2e8f0', padding: '0.5rem', borderRadius: '4px' }}>
+                                            Example: [<br />
+                                            &nbsp;&nbsp;{'{'} "question": "What is 2+2?", "options": ["3", "4", "5"], "correctAnswer": 1 {'}'}<br />
+                                            ]
+                                        </div>
+                                        <textarea
+                                            required
+                                            rows="5"
+                                            value={newLesson.url}
+                                            onChange={e => setNewLesson({ ...newLesson, url: e.target.value })}
+                                            placeholder='[{"question": "...", "options": ["..."], "correctAnswer": 0}]'
+                                            style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontFamily: 'monospace' }}
+                                        />
+                                    </div>
+                                ) : (
+                                    <div style={{ marginBottom: '1rem' }}>
+                                        <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.5rem', color: '#64748b' }}>URL</label>
+                                        <input
+                                            type="url"
+                                            required
+                                            value={newLesson.url}
+                                            onChange={e => setNewLesson({ ...newLesson, url: e.target.value })}
+                                            placeholder="https://..."
+                                            style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}
+                                        />
+                                    </div>
+                                )}
+
                                 <div style={{ marginBottom: '1rem' }}>
                                     <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.5rem', color: '#64748b' }}>Description</label>
                                     <textarea

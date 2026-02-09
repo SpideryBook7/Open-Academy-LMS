@@ -4,6 +4,152 @@ import ReactPlayer from 'react-player'
 import { supabase } from '../lib/supabaseClient'
 import Sidebar from '../components/Sidebar'
 
+// Basic Quiz Component
+const QuizPlayer = ({ lessonData, courseId }) => {
+    const [questions, setQuestions] = useState([])
+    const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
+    const [selectedOption, setSelectedOption] = useState(null)
+    const [score, setScore] = useState(0)
+    const [showResult, setShowResult] = useState(false)
+
+    useEffect(() => {
+        if (lessonData?.video_url) {
+            try {
+                const parsed = JSON.parse(lessonData.video_url)
+                setQuestions(Array.isArray(parsed) ? parsed : [])
+                setCurrentQuestionIndex(0)
+                setScore(0)
+                setShowResult(false)
+                setSelectedOption(null)
+            } catch (e) {
+                console.error("Invalid Quiz JSON", e)
+                setQuestions([])
+            }
+        }
+    }, [lessonData])
+
+    const handleAnswer = (optionIndex) => {
+        setSelectedOption(optionIndex)
+    }
+
+    const handleNext = async () => {
+        let newScore = score
+        if (selectedOption === questions[currentQuestionIndex].correctAnswer) {
+            newScore = score + 1
+            setScore(newScore)
+        }
+
+        const nextQuestion = currentQuestionIndex + 1
+        if (nextQuestion < questions.length) {
+            setCurrentQuestionIndex(nextQuestion)
+            setSelectedOption(null)
+        } else {
+            setShowResult(true)
+            // Save completion if passed
+            const passed = newScore >= questions.length * 0.6
+            if (passed && courseId) {
+                try {
+                    const { data: { session } } = await supabase.auth.getSession()
+                    if (session?.user) {
+                        await supabase
+                            .from('enrollments')
+                            .update({ completed: true })
+                            .eq('course_id', courseId)
+                            .eq('user_id', session.user.id)
+                    }
+                } catch (error) {
+                    console.error("Error updating completion:", error)
+                }
+            }
+        }
+    }
+
+    if (questions.length === 0) return <div style={{ padding: '2rem', textAlign: 'center' }}>Invalid Quiz Data</div>
+
+    if (showResult) {
+        const passed = score >= questions.length * 0.6 // 60% pass rate
+        return (
+            <div style={{ padding: '3rem', textAlign: 'center', backgroundColor: 'white', borderRadius: '16px' }}>
+                <h2 style={{ fontSize: '2rem', marginBottom: '1rem' }}>Quiz Results</h2>
+                <div style={{ fontSize: '4rem', fontWeight: 'bold', color: passed ? '#22c55e' : '#ef4444', marginBottom: '1rem' }}>
+                    {score} / {questions.length}
+                </div>
+                <p style={{ fontSize: '1.2rem', color: '#64748b', marginBottom: '2rem' }}>
+                    {passed ? 'Congratulations! You passed this lesson and completed the course.' : 'Keep practicing and try again!'}
+                </p>
+                <button
+                    onClick={() => {
+                        setCurrentQuestionIndex(0)
+                        setScore(0)
+                        setShowResult(false)
+                        setSelectedOption(null)
+                    }}
+                    style={{ padding: '0.75rem 1.5rem', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '1rem' }}
+                >
+                    Retry Quiz
+                </button>
+            </div>
+        )
+    }
+
+
+    const currentQuestion = questions[currentQuestionIndex]
+
+    return (
+        <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '2rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.02)' }}>
+            <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#0f172a' }}>Question {currentQuestionIndex + 1} of {questions.length}</h3>
+                <span style={{ fontSize: '0.9rem', color: '#64748b', backgroundColor: '#f1f5f9', padding: '0.25rem 0.5rem', borderRadius: '4px' }}>Quiz</span>
+            </div>
+
+            <p style={{ fontSize: '1.1rem', marginBottom: '2rem', color: '#334155' }}>
+                {currentQuestion.question}
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2rem' }}>
+                {currentQuestion.options.map((option, index) => (
+                    <button
+                        key={index}
+                        onClick={() => handleAnswer(index)}
+                        style={{
+                            padding: '1rem',
+                            textAlign: 'left',
+                            backgroundColor: selectedOption === index ? '#eff6ff' : 'white',
+                            border: selectedOption === index ? '2px solid #3b82f6' : '1px solid #e2e8f0',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            fontSize: '1rem',
+                            color: selectedOption === index ? '#1e40af' : '#475569',
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        {option}
+                    </button>
+                ))}
+            </div>
+
+            <button
+                disabled={selectedOption === null}
+                onClick={handleNext}
+                style={{
+                    width: '100%',
+                    padding: '1rem',
+                    backgroundColor: selectedOption === null ? '#cbd5e1' : '#0f172a',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '1rem',
+                    fontWeight: '600',
+                    cursor: selectedOption === null ? 'not-allowed' : 'pointer',
+                    transition: 'background 0.2s'
+                }}
+            >
+                {currentQuestionIndex + 1 === questions.length ? 'Submit Quiz' : 'Next Question'}
+            </button>
+        </div>
+    )
+}
+
 const CourseViewer = () => {
     const { id } = useParams()
     const navigate = useNavigate()
@@ -11,7 +157,7 @@ const CourseViewer = () => {
     const [lessons, setLessons] = useState([]) // All content
     const [activeLesson, setActiveLesson] = useState(null)
     const [loading, setLoading] = useState(true)
-    const [activeTab, setActiveTab] = useState('lessons') // 'lessons' (videos) or 'materials' (links)
+    const [activeTab, setActiveTab] = useState('lessons') // 'lessons' (videos/quizzes) or 'materials' (links)
 
     useEffect(() => {
         const fetchCourseDetails = async () => {
@@ -36,11 +182,11 @@ const CourseViewer = () => {
                 if (lessonsError) throw lessonsError
                 setLessons(lessonsData || [])
 
-                // Set first video as active if available
+                // Set first content as active if available
                 if (lessonsData && lessonsData.length > 0) {
-                    const firstVideo = lessonsData.find(l => l.content_type === 'video' || !l.content_type)
-                    if (firstVideo) {
-                        setActiveLesson(firstVideo)
+                    const firstContent = lessonsData.find(l => l.content_type === 'video' || l.content_type === 'quiz' || !l.content_type)
+                    if (firstContent) {
+                        setActiveLesson(firstContent)
                     }
                 }
 
@@ -72,7 +218,7 @@ const CourseViewer = () => {
     const videoId = activeLesson ? getYouTubeId(activeLesson.video_url) : null;
 
     // Filter content
-    const videoLessons = lessons.filter(l => l.content_type === 'video' || !l.content_type)
+    const videoLessons = lessons.filter(l => l.content_type === 'video' || l.content_type === 'quiz' || !l.content_type)
     const materialResources = lessons.filter(l => l.content_type === 'link')
 
     if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#f8fafc', color: '#64748b' }}>Loading Course...</div>
@@ -102,31 +248,39 @@ const CourseViewer = () => {
 
                         {activeLesson ? (
                             <div style={{ maxWidth: '1000px', width: '100%', margin: '0 auto' }}>
-                                {/* Video Player */}
-                                <div style={{
-                                    aspectRatio: '16/9',
-                                    backgroundColor: 'black',
-                                    borderRadius: '16px',
-                                    overflow: 'hidden',
-                                    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-                                    marginBottom: '2rem'
-                                }}>
-                                    {videoId ? (
-                                        <iframe
-                                            width="100%"
-                                            height="100%"
-                                            src={`https://www.youtube.com/embed/${videoId}`}
-                                            title={activeLesson.title}
-                                            frameBorder="0"
-                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                            allowFullScreen
-                                        ></iframe>
-                                    ) : (
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'white' }}>
-                                            <p>Invalid Video URL</p>
-                                        </div>
-                                    )}
-                                </div>
+
+                                {/* Content Display: Video OR Quiz */}
+                                {activeLesson.content_type === 'quiz' ? (
+                                    <div style={{ marginBottom: '2rem' }}>
+                                        <QuizPlayer lessonData={activeLesson} courseId={course.id} />
+                                    </div>
+                                ) : (
+                                    /* Video Player */
+                                    <div style={{
+                                        aspectRatio: '16/9',
+                                        backgroundColor: 'black',
+                                        borderRadius: '16px',
+                                        overflow: 'hidden',
+                                        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                                        marginBottom: '2rem'
+                                    }}>
+                                        {videoId ? (
+                                            <iframe
+                                                width="100%"
+                                                height="100%"
+                                                src={`https://www.youtube.com/embed/${videoId}`}
+                                                title={activeLesson.title}
+                                                frameBorder="0"
+                                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                allowFullScreen
+                                            ></iframe>
+                                        ) : (
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'white' }}>
+                                                <p>Invalid Video URL</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
 
                                 {/* Title & Instructor */}
                                 <div style={{ marginBottom: '1.5rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '1.5rem' }}>
@@ -145,7 +299,7 @@ const CourseViewer = () => {
                                     </div>
                                 </div>
 
-                                {/* Description Box (Yellow area requested) */}
+                                {/* Description Box */}
                                 <div style={{ backgroundColor: '#fff', borderRadius: '12px', padding: '1.5rem', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
                                     <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '0.75rem', color: '#334155' }}>Description</h3>
                                     <p style={{ color: '#475569', lineHeight: '1.6', whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
@@ -155,7 +309,7 @@ const CourseViewer = () => {
                             </div>
                         ) : (
                             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: '#94a3b8' }}>
-                                {videoLessons.length > 0 ? 'Select a video to start.' : 'No videos available in this course.'}
+                                {videoLessons.length > 0 ? 'Select a lesson to start.' : 'No content available in this course.'}
                             </div>
                         )}
                     </div>
@@ -218,13 +372,17 @@ const CourseViewer = () => {
                                                 {index + 1}. {lesson.title}
                                             </div>
                                             <div style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>🎥 Video</span>
+                                                {lesson.content_type === 'quiz' ? (
+                                                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#3b82f6' }}>📝 Quiz</span>
+                                                ) : (
+                                                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>🎥 Video</span>
+                                                )}
                                             </div>
                                         </div>
                                     ))}
                                     {videoLessons.length === 0 && (
                                         <div style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.9rem' }}>
-                                            No video lessons found.
+                                            No lessons found.
                                         </div>
                                     )}
                                 </div>

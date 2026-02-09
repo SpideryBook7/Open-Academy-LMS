@@ -29,7 +29,8 @@ function AdminUsers() {
             .select(`
                 *,
                 enrollments (
-                    course_id
+                    course_id,
+                    completed
                 )
             `)
             .order('created_at', { ascending: false });
@@ -55,22 +56,20 @@ function AdminUsers() {
         e.preventDefault();
         setCreating(true);
         try {
-            // Create user in auth.users
+            // Create user with autoConfirm (requires email confirmation disabled in Supabase)
             const { data: authData, error: authError } = await supabase.auth.signUp({
                 email: newUser.email,
                 password: newUser.password,
                 options: {
                     data: {
                         full_name: newUser.full_name,
-                        role: 'student' // Default role for new users
-                    }
+                        role: 'student'
+                    },
+                    emailRedirectTo: undefined // Skip confirmation email
                 }
             });
 
             if (authError) throw authError;
-
-            // If auth user created, a profile should be automatically created via trigger
-            // We can optionally update the profile here if needed, but signUp with data usually handles it.
 
             alert('User created successfully!')
             setShowCreateModal(false)
@@ -198,16 +197,19 @@ function AdminUsers() {
                                     <td style={{ padding: '1rem' }}>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'flex-start' }}>
                                             {user.enrollments && user.enrollments.map((enrollment, idx) => (
-                                                <span key={idx} style={{
-                                                    fontSize: '0.75rem',
-                                                    backgroundColor: '#f1f5f9',
-                                                    padding: '2px 8px',
-                                                    borderRadius: '4px',
-                                                    color: '#475569',
-                                                    border: '1px solid #e2e8f0'
-                                                }}>
-                                                    {getCourseTitle(enrollment.course_id)}
-                                                </span>
+                                                <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                    <span style={{
+                                                        fontSize: '0.75rem',
+                                                        backgroundColor: '#f1f5f9',
+                                                        padding: '2px 8px',
+                                                        borderRadius: '4px',
+                                                        color: '#475569',
+                                                        border: '1px solid #e2e8f0'
+                                                    }}>
+                                                        {getCourseTitle(enrollment.course_id)}
+                                                    </span>
+                                                    {enrollment.completed && <span title="Course Completed (Passed Quiz)" style={{ fontSize: '0.8rem' }}>✅</span>}
+                                                </div>
                                             ))}
                                             <button
                                                 onClick={() => {
