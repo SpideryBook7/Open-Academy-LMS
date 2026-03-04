@@ -503,11 +503,13 @@ const CourseViewer = () => {
                                         <h2 style={{ fontSize: '1.8rem', fontWeight: '700', color: '#ffffff', marginBottom: '1.25rem' }}>{activeLesson.title}</h2>
 
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem', padding: '1rem', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '16px', width: 'fit-content' }}>
-                                            <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: courseColor.replace('0.5', '0.2'), display: 'flex', alignItems: 'center', justifyContent: 'center', border: `2px solid ${courseColor.replace('0.5', '0.8')}` }}>
-                                                <span style={{ fontWeight: '700', color: 'white' }}>{(course.instructor?.full_name || 'S').charAt(0)}</span>
-                                            </div>
+                                            <img
+                                                src={course.instructor_avatar || `https://ui-avatars.com/api/?name=${course.instructor_name || course.instructor?.full_name || 'A'}&background=random`}
+                                                alt="Instructor"
+                                                style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: `2px solid ${courseColor.replace('0.5', '0.8')}` }}
+                                            />
                                             <div>
-                                                <p style={{ margin: 0, color: 'white', fontWeight: '700', fontSize: '0.9rem' }}>{course.instructor?.full_name || 'Staff Conecta'}</p>
+                                                <p style={{ margin: 0, color: 'white', fontWeight: '700', fontSize: '0.9rem' }}>{course.instructor_name || course.instructor?.full_name || 'Staff Conecta'}</p>
                                                 <p style={{ margin: 0, color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem', fontWeight: '600' }}>Instructor Certificado</p>
                                             </div>
                                         </div>
