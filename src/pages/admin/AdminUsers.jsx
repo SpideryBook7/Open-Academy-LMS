@@ -1,8 +1,91 @@
 import React, { useEffect, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { supabase } from '../../lib/supabaseClient'
 import AdminSidebar from '../../components/AdminSidebar'
 
+const ExpandableEnrollments = ({ enrollments, getCourseTitle, onEnrollClick }) => {
+    const [isExpanded, setIsExpanded] = useState(false);
+
+    // Fallback safety
+    const safeEnrollments = enrollments || [];
+    const hasMoreThanTwo = safeEnrollments.length > 2;
+    const visibleEnrollments = isExpanded ? safeEnrollments : safeEnrollments.slice(0, 2);
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', alignItems: 'flex-start' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                {visibleEnrollments.map((enrollment, idx) => (
+                    <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', backgroundColor: '#f8fafc', padding: '0.3rem 0.75rem', borderRadius: '10px', border: '1px solid #e2e8f0', whiteSpace: 'nowrap' }}>
+                        <span style={{ fontSize: '0.75rem', color: '#475569', fontWeight: '600' }}>
+                            {getCourseTitle(enrollment.course_id)}
+                        </span>
+                        {enrollment.completed && <span title="Completado" style={{ fontSize: '0.8rem' }}>✅</span>}
+                    </div>
+                ))}
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.2rem' }}>
+                <button
+                    onClick={onEnrollClick}
+                    style={{
+                        padding: '0.4rem 1rem',
+                        fontSize: '0.8rem',
+                        backgroundColor: 'rgba(0, 71, 186, 0.08)',
+                        color: 'var(--accent-color)',
+                        border: 'none',
+                        borderRadius: '10px',
+                        cursor: 'pointer',
+                        fontWeight: '700',
+                        transition: 'all 0.2s',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.4rem',
+                        whiteSpace: 'nowrap'
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--accent-color)'; e.currentTarget.style.color = 'white'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(0, 71, 186, 0.08)'; e.currentTarget.style.color = 'var(--accent-color)'; }}
+                >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    Inscribir
+                </button>
+
+                {hasMoreThanTwo && (
+                    <button
+                        onClick={() => setIsExpanded(!isExpanded)}
+                        style={{
+                            padding: '0.4rem 0.6rem',
+                            fontSize: '0.75rem',
+                            backgroundColor: 'transparent',
+                            color: '#64748b',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '10px',
+                            cursor: 'pointer',
+                            fontWeight: '600',
+                            transition: 'all 0.2s',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.2rem',
+                            whiteSpace: 'nowrap'
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f1f5f9'; e.currentTarget.style.color = '#334155'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#64748b'; }}
+                        title={isExpanded ? "Ver menos" : `Ver ${safeEnrollments.length - 2} más`}
+                    >
+                        {isExpanded ? (
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                        ) : (
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        )}
+                        {isExpanded ? 'Menos' : `+${safeEnrollments.length - 2}`}
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+};
+
 function AdminUsers() {
+    const location = useLocation();
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
@@ -20,7 +103,14 @@ function AdminUsers() {
     useEffect(() => {
         fetchUsers();
         fetchCourses(); // Fetch courses when component mounts
-    }, []);
+
+        // Auto-open modal if requested via navigation state
+        if (location.state?.openCreateModal) {
+            setShowCreateModal(true);
+            // Clear state from history so it doesn't reopen on refresh
+            window.history.replaceState({}, '');
+        }
+    }, [location.state]);
 
     const fetchUsers = async () => {
         setLoading(true);
@@ -57,7 +147,7 @@ function AdminUsers() {
         setCreating(true);
         try {
             // Create user with autoConfirm (requires email confirmation disabled in Supabase)
-            const { data: authData, error: authError } = await supabase.auth.signUp({
+            const { error: authError } = await supabase.auth.signUp({
                 email: newUser.email,
                 password: newUser.password,
                 options: {
@@ -71,12 +161,12 @@ function AdminUsers() {
 
             if (authError) throw authError;
 
-            alert('User created successfully!')
+            alert('Usuario creado exitosamente!')
             setShowCreateModal(false)
             setNewUser({ email: '', password: '', full_name: '' })
             fetchUsers() // Refresh list
         } catch (error) {
-            alert('Error creating user: ' + error.message)
+            alert('Error al crear usuario: ' + error.message)
         } finally {
             setCreating(false)
         }
@@ -93,16 +183,56 @@ function AdminUsers() {
 
             setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u))
         } catch (error) {
-            alert('Error updating role: ' + error.message)
+            alert('Error al actualizar el rol: ' + error.message)
         }
     }
+
+    const handleDeleteUser = async (userId, userName) => {
+        if (!window.confirm(`¿Estás seguro de que deseas eliminar a ${userName}?\n\nEsto eliminará su perfil y todas sus inscripciones, retirando su acceso a la plataforma.`)) {
+            return;
+        }
+
+        try {
+            // First, delete enrollments (if no ON DELETE CASCADE is set)
+            const { error: errorEnroll } = await supabase
+                .from('enrollments')
+                .delete()
+                .eq('user_id', userId);
+
+            if (errorEnroll) throw errorEnroll;
+
+            // Then, delete the profile
+            const { error: errorProf } = await supabase
+                .from('profiles')
+                .delete()
+                .eq('id', userId);
+
+            if (errorProf) throw errorProf;
+
+            alert(`Usuario ${userName} eliminado exitosamente.`);
+            setUsers(users.filter(u => u.id !== userId));
+
+        } catch (error) {
+            alert('Error al eliminar usuario: ' + error.message);
+        }
+    };
 
     const handleEnrollUser = async (e) => {
         e.preventDefault();
         setEnrolling(true);
         try {
             if (!selectedUser || !selectedCourse) {
-                alert('Please select a user and a course.');
+                alert('Por favor, seleccione un usuario y un curso.');
+                return;
+            }
+
+            // Verificación en frontend si ya está inscrito
+            const isAlreadyEnrolled = selectedUser.enrollments?.some(
+                (enrollment) => enrollment.course_id === selectedCourse
+            );
+
+            if (isAlreadyEnrolled) {
+                alert('El usuario ya está inscrito en este curso.');
                 return;
             }
 
@@ -113,19 +243,19 @@ function AdminUsers() {
             if (error) {
                 // Check for unique constraint error (user already enrolled in course)
                 if (error.code === '23505') { // PostgreSQL unique violation error code
-                    alert('User is already enrolled in this course.');
+                    alert('El usuario ya está inscrito en este curso.');
                 } else {
                     throw error;
                 }
             } else {
-                alert(`User ${selectedUser.full_name} enrolled in course successfully!`);
+                alert(`El usuario ${selectedUser.full_name} se inscribió en el curso exitosamente!`);
                 setShowEnrollModal(false);
                 setSelectedUser(null);
                 setSelectedCourse('');
                 fetchUsers(); // Refresh to show new enrollment
             }
         } catch (error) {
-            alert('Error enrolling user: ' + error.message);
+            alert('Error al inscribir usuario: ' + error.message);
         } finally {
             setEnrolling(false);
         }
@@ -140,232 +270,358 @@ function AdminUsers() {
     // Helper to get course title
     const getCourseTitle = (courseId) => {
         const course = courses.find(c => c.id === courseId);
-        return course ? course.title : 'Unknown Course';
+        return course ? course.title : 'Curso desconocido';
     }
 
     return (
-        <div style={{ backgroundColor: '#f1f5f9', minHeight: '100vh', display: 'flex' }}>
+        <div style={{ backgroundColor: 'var(--background-color)', minHeight: '100vh', display: 'flex', position: 'relative', overflow: 'hidden' }}>
             <AdminSidebar />
 
-            <main style={{ marginLeft: '260px', flex: 1, padding: '3rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                    <h1 style={{ fontSize: '2rem', fontWeight: '700', color: '#0f172a' }}>User Management</h1>
+            {/* Premium Decorative Glows */}
+            <div style={{ position: 'absolute', top: '-10%', right: '-5%', width: '400px', height: '400px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%)', filter: 'blur(40px)', pointerEvents: 'none', zIndex: 0 }}></div>
+            <div style={{ position: 'absolute', bottom: '10%', left: '20%', width: '300px', height: '300px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)', filter: 'blur(40px)', pointerEvents: 'none', zIndex: 0 }}></div>
 
-                    <div style={{ display: 'flex', gap: '1rem' }}>
-                        <input
-                            type="text"
-                            placeholder="Search users..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            style={{ padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #e2e8f0', width: '300px' }}
-                        />
-                        <button
-                            onClick={() => setShowCreateModal(true)}
-                            style={{ padding: '0.75rem 1.5rem', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}
-                        >
-                            + New User
-                        </button>
-                    </div>
-                </div>
+            <main style={{ marginLeft: '260px', flex: 1, padding: '3rem', display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1, minHeight: '100vh' }}>
+                <style>{`
+                    @keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+                    @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+                    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+                    @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+                `}</style>
 
-                <div style={{ backgroundColor: 'white', borderRadius: '16px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.02)', overflow: 'hidden' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                        <thead style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                            <tr>
-                                <th style={{ padding: '1rem', fontSize: '0.875rem', color: '#64748b', fontWeight: '600' }}>User</th>
-                                <th style={{ padding: '1rem', fontSize: '0.875rem', color: '#64748b', fontWeight: '600' }}>Enrollments</th>
-                                <th style={{ padding: '1rem', fontSize: '0.875rem', color: '#64748b', fontWeight: '600' }}>Email</th>
-                                <th style={{ padding: '1rem', fontSize: '0.875rem', color: '#64748b', fontWeight: '600' }}>Role</th>
-                                <th style={{ padding: '1rem', fontSize: '0.875rem', color: '#64748b', fontWeight: '600' }}>Joined</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredUsers.map(user => (
-                                <tr key={user.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                    <td style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                        <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#e2e8f0', overflow: 'hidden' }}>
-                                            {user.avatar_url ? (
-                                                <img src={user.avatar_url} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                            ) : (
-                                                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontWeight: 'bold' }}>
-                                                    {user.full_name?.charAt(0) || 'U'}
-                                                </div>
-                                            )}
-                                        </div>
-                                        <span style={{ fontWeight: '600', color: '#0f172a' }}>{user.full_name || 'Unknown'}</span>
-                                    </td>
-                                    <td style={{ padding: '1rem' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'flex-start' }}>
-                                            {user.enrollments && user.enrollments.map((enrollment, idx) => (
-                                                <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                    <span style={{
-                                                        fontSize: '0.75rem',
-                                                        backgroundColor: '#f1f5f9',
-                                                        padding: '2px 8px',
-                                                        borderRadius: '4px',
-                                                        color: '#475569',
-                                                        border: '1px solid #e2e8f0'
-                                                    }}>
-                                                        {getCourseTitle(enrollment.course_id)}
-                                                    </span>
-                                                    {enrollment.completed && <span title="Course Completed (Passed Quiz)" style={{ fontSize: '0.8rem' }}>✅</span>}
-                                                </div>
-                                            ))}
-                                            <button
-                                                onClick={() => {
-                                                    setSelectedUser(user)
-                                                    setShowEnrollModal(true)
-                                                }}
-                                                style={{
-                                                    padding: '0.4rem 0.8rem',
-                                                    fontSize: '0.8rem',
-                                                    backgroundColor: '#e0f2fe',
-                                                    color: '#0284c7',
-                                                    border: 'none',
-                                                    borderRadius: '6px',
-                                                    cursor: 'pointer',
-                                                    fontWeight: '600',
-                                                    whiteSpace: 'nowrap',
-                                                    marginTop: '0.25rem'
-                                                }}
-                                            >
-                                                + Enroll
-                                            </button>
-                                        </div>
-                                    </td>
-                                    <td style={{ padding: '1rem', color: '#64748b' }}>{user.email}</td>
-                                    <td style={{ padding: '1rem' }}>
-                                        <select
-                                            value={user.role || 'student'}
-                                            onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                                            style={{
-                                                padding: '0.5rem',
-                                                borderRadius: '6px',
-                                                border: '1px solid #e2e8f0',
-                                                backgroundColor: user.role === 'admin' ? '#eff6ff' : 'white',
-                                                color: user.role === 'admin' ? '#1d4ed8' : '#334155',
-                                                fontWeight: '600',
-                                                fontSize: '0.875rem'
-                                            }}
+                <div style={{ flex: 1 }}>
+                    <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3.5rem', animation: 'fadeInDown 0.8s ease-out' }}>
+                        <div>
+                            <h1 style={{ fontSize: '2.5rem', fontWeight: '800', color: '#ffffff', marginBottom: '0.25rem', letterSpacing: '-0.5px' }}>
+                                Gestión de <span style={{ color: 'var(--accent-gold)', textShadow: '0 0 20px rgba(207, 170, 3, 0.92)' }}>Usuarios</span>
+                            </h1>
+                            <p style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '1.1rem', fontWeight: '500' }}>Administra y controla el acceso a la plataforma SIRA.</p>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '1.25rem' }}>
+                            <div style={{ position: 'relative' }}>
+                                <input
+                                    type="text"
+                                    placeholder="Buscar usuarios..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    style={{
+                                        padding: '0.8rem 1.2rem 0.8rem 2.8rem',
+                                        borderRadius: '16px',
+                                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                        color: '#ffffff',
+                                        width: '320px',
+                                        backdropFilter: 'blur(10px)',
+                                        fontSize: '0.95rem',
+                                        outline: 'none',
+                                        transition: 'all 0.3s'
+                                    }}
+                                    onFocus={(e) => { e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.15)'; e.target.style.borderColor = 'var(--accent-gold)'; }}
+                                    onBlur={(e) => { e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'; e.target.style.borderColor = 'rgba(255, 255, 255, 0.2)'; }}
+                                />
+                                <svg style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255, 255, 255, 0.5)' }} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                            </div>
+                            <button
+                                onClick={() => setShowCreateModal(true)}
+                                style={{
+                                    padding: '0.8rem 1.6rem',
+                                    backgroundColor: 'var(--accent-color, #3b82f6)',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '16px',
+                                    fontWeight: '700',
+                                    cursor: 'pointer',
+                                    boxShadow: '0 8px 20px rgba(0, 0, 0, 0.2)',
+                                    transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+                                }}
+                                onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 12px 25px rgba(0, 0, 0, 0.3)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 20px rgba(0, 0, 0, 0.2)'; }}
+                            >
+                                + Nuevo Usuario
+                            </button>
+                        </div>
+                    </header>
+
+                    <div
+                        style={{
+                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                            borderRadius: '28px',
+                            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
+                            backdropFilter: 'blur(20px)',
+                            border: '1px solid rgba(255, 255, 255, 0.5)',
+                            overflow: 'hidden',
+                            animation: 'fadeInUp 0.8s ease-out 0.2s both',
+                            transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                            cursor: 'default',
+                            width: '100%'
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 20px 40px -10px rgba(0, 0, 0, 0.15)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(0, 0, 0, 0.1)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                    >
+                        {/* Wrapper para el scroll horizontal */}
+                        <div style={{ width: '100%', overflowX: 'auto' }} className="premium-scrollbar">
+                            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '800px' }}>
+                                <thead style={{ backgroundColor: 'rgba(0,0,0,0.02)', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
+                                    <tr>
+                                        <th style={{ padding: '1.25rem', fontSize: '0.9rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Usuario</th>
+                                        <th style={{ padding: '1.25rem', fontSize: '0.9rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Inscripciones</th>
+                                        <th style={{ padding: '1.25rem', fontSize: '0.9rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Correo</th>
+                                        <th style={{ padding: '1.25rem', fontSize: '0.9rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Rol</th>
+                                        <th style={{ padding: '1.25rem', fontSize: '0.9rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Registro</th>
+                                        <th style={{ padding: '1.25rem', fontSize: '0.9rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {filteredUsers.map(user => (
+                                        <tr
+                                            key={user.id}
+                                            style={{ borderBottom: '1px solid rgba(0,0,0,0.03)', transition: 'all 0.2s ease' }}
+                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                                         >
-                                            <option value="student">Student</option>
-                                            <option value="admin">Admin</option>
-                                        </select>
-                                    </td>
-                                    <td style={{ padding: '1rem', color: '#94a3b8', fontSize: '0.875rem' }}>
-                                        {new Date(user.created_at).toLocaleDateString()}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                    {loading && <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>Loading users...</div>}
+                                            <td style={{ padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                                <div style={{ width: '45px', height: '45px', minWidth: '45px', borderRadius: '15px', backgroundColor: '#eff6ff', overflow: 'hidden', border: '2px solid white', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
+                                                    {user.avatar_url ? (
+                                                        <img src={user.avatar_url} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                    ) : (
+                                                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3b82f6', fontWeight: '800', fontSize: '1.1rem' }}>
+                                                            {user.full_name?.charAt(0) || 'U'}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <span style={{ fontWeight: '700', color: '#1e293b', fontSize: '1rem', whiteSpace: 'nowrap' }}>{user.full_name || 'Desconocido'}</span>
+                                            </td>
+                                            <td style={{ padding: '1.25rem' }}>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', alignItems: 'flex-start' }}>
+                                                    <ExpandableEnrollments
+                                                        enrollments={user.enrollments || []}
+                                                        getCourseTitle={getCourseTitle}
+                                                        onEnrollClick={() => {
+                                                            setSelectedUser(user)
+                                                            setShowEnrollModal(true)
+                                                        }}
+                                                    />
+                                                </div>
+                                            </td>
+                                            <td style={{ padding: '1.25rem', color: '#64748b', fontSize: '0.95rem', fontWeight: '500' }}>{user.email}</td>
+                                            <td style={{ padding: '1.25rem' }}>
+                                                <select
+                                                    value={user.role || 'student'}
+                                                    onChange={(e) => handleRoleChange(user.id, e.target.value)}
+                                                    style={{
+                                                        padding: '0.5rem 0.75rem',
+                                                        borderRadius: '12px',
+                                                        border: '1.5px solid transparent',
+                                                        backgroundColor: user.role === 'admin' ? '#fff7ed' : '#f8fafc',
+                                                        color: user.role === 'admin' ? '#c2410c' : '#475569',
+                                                        fontWeight: '700',
+                                                        fontSize: '0.85rem',
+                                                        cursor: 'pointer',
+                                                        outline: 'none',
+                                                        transition: 'all 0.2s'
+                                                    }}
+                                                    onFocus={(e) => e.target.style.borderColor = user.role === 'admin' ? '#fed7aa' : '#3b82f6'}
+                                                    onBlur={(e) => e.target.style.borderColor = 'transparent'}
+                                                >
+                                                    <option value="student">Estudiante</option>
+                                                    <option value="admin">Administrador</option>
+                                                </select>
+                                            </td>
+                                            <td style={{ padding: '1.25rem', color: '#94a3b8', fontSize: '0.9rem', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                                                {new Date(user.created_at).toLocaleDateString()}
+                                            </td>
+                                            <td style={{ padding: '1.25rem', textAlign: 'center' }}>
+                                                <button
+                                                    onClick={() => handleDeleteUser(user.id, user.full_name || user.email)}
+                                                    style={{
+                                                        backgroundColor: '#fee2e2',
+                                                        color: '#ef4444',
+                                                        border: '1px solid #fecaca',
+                                                        borderRadius: '10px',
+                                                        padding: '0.5rem',
+                                                        cursor: 'pointer',
+                                                        transition: 'all 0.2s',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        margin: '0 auto'
+                                                    }}
+                                                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#fca5a5'; e.currentTarget.style.color = '#7f1d1d'; }}
+                                                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#fee2e2'; e.currentTarget.style.color = '#ef4444'; }}
+                                                    title="Eliminar usuario"
+                                                >
+                                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                            {loading && (
+                                <div style={{ padding: '4rem', textAlign: 'center' }}>
+                                    <p style={{ color: '#64748b', fontWeight: '600', fontSize: '1.1rem' }}>Cargando directorio de usuarios...</p>
+                                </div>
+                            )}
+                            {!loading && filteredUsers.length === 0 && (
+                                <div style={{ padding: '4rem', textAlign: 'center' }}>
+                                    <p style={{ color: '#94a3b8', fontWeight: '500' }}>No se encontraron usuarios que coincidan con la búsqueda.</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </div>
-                {/* Create User Modal */}
+                {/* Create User Modal - Premium Redesign */}
                 {showCreateModal && (
-                    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100 }}>
-                        <div style={{ backgroundColor: 'white', padding: '2rem', borderRadius: '16px', width: '450px', maxWidth: '90%' }}>
-                            <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '1.5rem', color: '#0f172a' }}>Create New Student</h2>
-                            <form onSubmit={handleCreateUser}>
-                                <div style={{ marginBottom: '1rem' }}>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#64748b' }}>Full Name</label>
-                                    <input
-                                        type="text"
-                                        value={newUser.full_name}
-                                        onChange={e => setNewUser({ ...newUser, full_name: e.target.value })}
-                                        required
-                                        placeholder="John Doe"
-                                        style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}
-                                    />
+                    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(10px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100, animation: 'fadeIn 0.4s ease-out' }}>
+                        <div style={{ backgroundColor: 'white', padding: '2.5rem', borderRadius: '32px', width: '450px', maxWidth: '90%', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15), 0 0 40px rgba(0, 0, 0, 0.05)', border: '1px solid rgba(255, 255, 255, 0.8)', position: 'relative', overflow: 'hidden', animation: 'scaleIn 0.4s cubic-bezier(0.165, 0.84, 0.44, 1)' }}>
+                            {/* Decorative Glow inside Modal */}
+                            <div style={{ position: 'absolute', top: '-100px', right: '-100px', width: '200px', height: '200px', background: 'radial-gradient(circle, rgba(0, 71, 186, 0.05) 0%, transparent 70%)', zIndex: 0 }}></div>
+
+                            <div style={{ position: 'relative', zIndex: 1 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '2rem' }}>
+                                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+                                    </div>
+                                    <h3 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1e293b' }}>Nuevo Usuario</h3>
                                 </div>
-                                <div style={{ marginBottom: '1rem' }}>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#64748b' }}>Email</label>
-                                    <input
-                                        type="email"
-                                        value={newUser.email}
-                                        onChange={e => setNewUser({ ...newUser, email: e.target.value })}
-                                        required
-                                        placeholder="student@example.com"
-                                        style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}
-                                    />
-                                </div>
-                                <div style={{ marginBottom: '1.5rem' }}>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#64748b' }}>Password</label>
-                                    <input
-                                        type="password"
-                                        value={newUser.password}
-                                        onChange={e => setNewUser({ ...newUser, password: e.target.value })}
-                                        required
-                                        placeholder="Min. 6 characters"
-                                        minLength={6}
-                                        style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}
-                                    />
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowCreateModal(false)}
-                                        style={{ padding: '0.75rem 1.5rem', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: '500' }}
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={creating}
-                                        style={{ padding: '0.75rem 1.5rem', borderRadius: '8px', border: 'none', background: '#3b82f6', color: 'white', cursor: loading ? 'not-allowed' : 'pointer', fontWeight: '600' }}
-                                    >
-                                        {creating ? 'Creating...' : 'Create User'}
-                                    </button>
-                                </div>
-                            </form>
+                                <form onSubmit={handleCreateUser}>
+                                    <div style={{ marginBottom: '1.5rem' }}>
+                                        <label style={{ display: 'block', marginBottom: '0.6rem', fontSize: '0.9rem', fontWeight: '600', color: '#64748b' }}>Nombre completo</label>
+                                        <input
+                                            type="text"
+                                            value={newUser.full_name}
+                                            onChange={e => setNewUser({ ...newUser, full_name: e.target.value })}
+                                            required
+                                            placeholder="John Doe"
+                                            style={{ width: '100%', padding: '0.8rem 1rem', borderRadius: '14px', border: '1.5px solid #f1f5f9', backgroundColor: '#f8fafc', fontSize: '0.95rem', color: '#334155', transition: 'all 0.2s ease', outline: 'none' }}
+                                            onFocus={(e) => { e.target.style.borderColor = 'var(--accent-color)'; e.target.style.backgroundColor = 'white'; e.target.style.boxShadow = '0 0 0 4px rgba(0, 71, 186, 0.1)'; }}
+                                            onBlur={(e) => { e.target.style.borderColor = '#f1f5f9'; e.target.style.backgroundColor = '#f8fafc'; e.target.style.boxShadow = 'none'; }}
+                                        />
+                                    </div>
+                                    <div style={{ marginBottom: '1.5rem' }}>
+                                        <label style={{ display: 'block', marginBottom: '0.6rem', fontSize: '0.9rem', fontWeight: '600', color: '#64748b' }}>Correo electrónico</label>
+                                        <input
+                                            type="email"
+                                            value={newUser.email}
+                                            onChange={e => setNewUser({ ...newUser, email: e.target.value })}
+                                            required
+                                            placeholder="correo@gmail.com"
+                                            style={{ width: '100%', padding: '0.8rem 1rem', borderRadius: '14px', border: '1.5px solid #f1f5f9', backgroundColor: '#f8fafc', fontSize: '0.95rem', color: '#334155', transition: 'all 0.2s ease', outline: 'none' }}
+                                            onFocus={(e) => { e.target.style.borderColor = 'var(--accent-color)'; e.target.style.backgroundColor = 'white'; e.target.style.boxShadow = '0 0 0 4px rgba(0, 71, 186, 0.1)'; }}
+                                            onBlur={(e) => { e.target.style.borderColor = '#f1f5f9'; e.target.style.backgroundColor = '#f8fafc'; e.target.style.boxShadow = 'none'; }}
+                                        />
+                                    </div>
+                                    <div style={{ marginBottom: '2rem' }}>
+                                        <label style={{ display: 'block', marginBottom: '0.6rem', fontSize: '0.9rem', fontWeight: '600', color: '#64748b' }}>Contraseña</label>
+                                        <input
+                                            type="password"
+                                            value={newUser.password}
+                                            onChange={e => setNewUser({ ...newUser, password: e.target.value })}
+                                            required
+                                            placeholder="Mín. 6 caracteres"
+                                            minLength={6}
+                                            style={{ width: '100%', padding: '0.8rem 1rem', borderRadius: '14px', border: '1.5px solid #f1f5f9', backgroundColor: '#f8fafc', fontSize: '0.95rem', color: '#334155', transition: 'all 0.2s ease', outline: 'none' }}
+                                            onFocus={(e) => { e.target.style.borderColor = 'var(--accent-color)'; e.target.style.backgroundColor = 'white'; e.target.style.boxShadow = '0 0 0 4px rgba(0, 71, 186, 0.1)'; }}
+                                            onBlur={(e) => { e.target.style.borderColor = '#f1f5f9'; e.target.style.backgroundColor = '#f8fafc'; e.target.style.boxShadow = 'none'; }}
+                                        />
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '1rem' }}>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowCreateModal(false)}
+                                            style={{ flex: 1, padding: '1rem', borderRadius: '16px', border: '1.5px solid #fee2e2', background: '#fef2f2', color: '#ef4444', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s' }}
+                                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#fee2e2'; e.currentTarget.style.borderColor = '#fca5a5'; }}
+                                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#fef2f2'; e.currentTarget.style.borderColor = '#fee2e2'; }}
+                                        >
+                                            Cancelar
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            disabled={creating}
+                                            style={{ flex: 2, padding: '1rem', borderRadius: '16px', border: 'none', background: 'var(--accent-color)', color: 'white', fontWeight: '600', cursor: creating ? 'not-allowed' : 'pointer', boxShadow: '0 8px 15px rgba(30, 64, 175, 0.2)', transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)' }}
+                                            onMouseEnter={(e) => { if (!creating) { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 12px 20px rgba(30, 64, 175, 0.3)'; } }}
+                                            onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 15px rgba(30, 64, 175, 0.2)'; }}
+                                        >
+                                            {creating ? 'Creando...' : 'Crear usuario'}
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
                     </div>
                 )}
 
-                {/* Enroll User Modal */}
+                {/* Enroll User Modal - Premium Redesign */}
                 {showEnrollModal && (
-                    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100 }}>
-                        <div style={{ backgroundColor: 'white', padding: '2rem', borderRadius: '16px', width: '450px', maxWidth: '90%' }}>
-                            <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '1.5rem', color: '#0f172a' }}>Enroll User</h2>
-                            <p style={{ marginBottom: '1.5rem', color: '#64748b' }}>Enrolling <strong>{selectedUser?.full_name}</strong> in:</p>
+                    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(10px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100, animation: 'fadeIn 0.4s ease-out' }}>
+                        <div style={{ backgroundColor: 'white', padding: '2.5rem', borderRadius: '32px', width: '450px', maxWidth: '90%', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15), 0 0 40px rgba(0, 0, 0, 0.05)', border: '1px solid rgba(255, 255, 255, 0.8)', position: 'relative', overflow: 'hidden', animation: 'scaleIn 0.4s cubic-bezier(0.165, 0.84, 0.44, 1)' }}>
+                            <div style={{ position: 'absolute', bottom: '-80px', left: '-80px', width: '180px', height: '180px', background: 'radial-gradient(circle, rgba(249, 115, 22, 0.05) 0%, transparent 70%)', zIndex: 0 }}></div>
 
-                            <form onSubmit={handleEnrollUser}>
-                                <div style={{ marginBottom: '1.5rem' }}>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#64748b' }}>Select Course</label>
-                                    <select
-                                        value={selectedCourse}
-                                        onChange={e => setSelectedCourse(e.target.value)}
-                                        required
-                                        style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0', backgroundColor: 'white' }}
-                                    >
-                                        <option value="">-- Choose a Course --</option>
-                                        {courses.map(course => (
-                                            <option key={course.id} value={course.id}>{course.title}</option>
-                                        ))}
-                                    </select>
+                            <div style={{ position: 'relative', zIndex: 1 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: '#fff7ed', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+                                    </div>
+                                    <h3 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1e293b' }}>Inscribir Usuario</h3>
                                 </div>
-                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowEnrollModal(false)}
-                                        style={{ padding: '0.75rem 1.5rem', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: '500' }}
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={enrolling}
-                                        style={{ padding: '0.75rem 1.5rem', borderRadius: '8px', border: 'none', background: '#3b82f6', color: 'white', cursor: enrolling ? 'not-allowed' : 'pointer', fontWeight: '600' }}
-                                    >
-                                        {enrolling ? 'Enrolling...' : 'Enroll User'}
-                                    </button>
-                                </div>
-                            </form>
+
+                                <p style={{ marginBottom: '1.5rem', color: '#64748b', fontSize: '1rem', fontWeight: '500' }}>
+                                    Inscribiendo a <strong style={{ color: '#1e293b' }}>{selectedUser?.full_name}</strong>
+                                </p>
+
+                                <form onSubmit={handleEnrollUser}>
+                                    <div style={{ marginBottom: '2rem' }}>
+                                        <label style={{ display: 'block', marginBottom: '0.6rem', fontSize: '0.9rem', fontWeight: '600', color: '#64748b' }}>Seleccionar curso</label>
+                                        <div style={{ position: 'relative' }}>
+                                            <select
+                                                value={selectedCourse}
+                                                onChange={e => setSelectedCourse(e.target.value)}
+                                                required
+                                                style={{ width: '100%', padding: '0.8rem 1rem', borderRadius: '14px', border: '1.5px solid #f1f5f9', backgroundColor: '#f8fafc', fontSize: '0.95rem', color: '#334155', appearance: 'none', cursor: 'pointer', outline: 'none' }}
+                                                onFocus={(e) => { e.target.style.borderColor = '#f97316'; e.target.style.backgroundColor = 'white'; }}
+                                                onBlur={(e) => { e.target.style.borderColor = '#f1f5f9'; e.currentTarget.style.backgroundColor = '#f8fafc'; }}
+                                            >
+                                                <option value="">-- Elige un curso --</option>
+                                                {courses
+                                                    .filter(course => !selectedUser?.enrollments?.some(e => e.course_id === course.id))
+                                                    .map(course => (
+                                                        <option key={course.id} value={course.id}>{course.title}</option>
+                                                    ))}
+                                                {courses.filter(course => !selectedUser?.enrollments?.some(e => e.course_id === course.id)).length === 0 && (
+                                                    <option value="" disabled>El usuario ya está inscrito en todos los cursos</option>
+                                                )}
+                                            </select>
+                                            <svg style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#94a3b8' }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '1rem' }}>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowEnrollModal(false)}
+                                            style={{ flex: 1, padding: '1rem', borderRadius: '16px', border: '1.5px solid #fee2e2', background: '#fef2f2', color: '#ef4444', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s' }}
+                                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#fee2e2'; e.currentTarget.style.borderColor = '#fca5a5'; }}
+                                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#fef2f2'; e.currentTarget.style.borderColor = '#fee2e2'; }}
+                                        >
+                                            Cancelar
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            disabled={enrolling}
+                                            style={{ flex: 2, padding: '1rem', borderRadius: '16px', border: 'none', background: '#f97316', color: 'white', fontWeight: '600', cursor: enrolling ? 'not-allowed' : 'pointer', boxShadow: '0 8px 15px rgba(249, 115, 22, 0.2)', transition: 'all 0.3s' }}
+                                            onMouseEnter={(e) => { if (!enrolling) e.currentTarget.style.transform = 'translateY(-2px)' }}
+                                            onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)' }}
+                                        >
+                                            {enrolling ? 'Inscribiendo...' : 'Inscribir al curso'}
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
                     </div>
                 )}
-            </main >
-        </div >
+            </main>
+        </div>
     )
 }
 

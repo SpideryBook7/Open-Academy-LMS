@@ -1,8 +1,11 @@
 :root {
-    --font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+    --font-family: "Inter", system-ui, Avenir, Helvetica, Arial, sans-serif;
+
+    --background-color: #ff6017e3;
+    --background-sidebar: #6294ffdc;
 
     /* Lumina Light Theme Palette */
-    --bg-primary: #f8fafc;
+    --bg-primary: var(--background-color);
     /* Slate 50 */
     --bg-secondary: #ffffff;
     /* White */
@@ -14,10 +17,28 @@
     --text-muted: #94a3b8;
     /* Slate 400 */
 
-    --accent-color: #4f46e5;
-    /* Indigo 600 */
-    --accent-hover: #4338ca;
-    /* Indigo 700 */
+    --accent-color: #0047ba;
+    /* Corporate Blue */
+    --accent-hover: #00225e;
+    /* Darker Blue */
+
+    --primary-color: #0105e0;
+    --primary-light: #2e72e7;
+    /* Lighter Blue */
+    --primary-dark: #002a70;
+    /* Deep Navy */
+
+    --secondary-color: #e31837;
+    --secondary-light: #ff5c6f;
+    /* Lighter Red */
+
+    --surface-brand: #eef2ff;
+    /* Very light blue tint for backgrounds */
+    --accent-orange: #ff7300;
+    --accent-gold: #ffc107;
+    /* Gold for special highlights */
+
+    --secondary-hover: #c41230;
 
     --border-color: #e2e8f0;
     /* Slate 200 */
@@ -38,11 +59,12 @@
 
 body {
     font-family: var(--font-family);
-    background-color: var(--bg-primary);
+    background-color: var(--background-color);
     color: var(--text-primary);
     line-height: 1.5;
-    height: 100vh;
+    min-height: 100vh;
     margin: 0;
+    overflow-x: hidden;
 }
 
 input,
@@ -71,14 +93,14 @@ button {
 .auth-right {
     flex: 1.5;
     background-color: var(--bg-primary);
-    background-image: url('https://images.unsplash.com/photo-1541339907198-e08756dedf3f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80');
+    background-image: url("https://images.unsplash.com/photo-1541339907198-e08756dedf3f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80");
     background-size: cover;
     background-position: center;
     position: relative;
 }
 
 .auth-right::after {
-    content: '';
+    content: "";
     position: absolute;
     top: 0;
     left: 0;
@@ -137,4 +159,86 @@ button {
 .toggle-btn.active {
     color: var(--accent-color);
     border-bottom-color: var(--accent-color);
+}
+
+/* Premium Scrollbar Style */
+.premium-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.premium-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.premium-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 10px;
+}
+
+.premium-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-color);
+    opacity: 0.5;
+}
+
+/* Scrollbar on the Left utility */
+.scrollbar-left {
+    direction: rtl;
+}
+
+.scrollbar-left>* {
+    direction: ltr;
+}
+
+/* Calendar Event Marquee Animation */
+@keyframes marquee {
+    0% {
+        transform: translateX(0);
+    }
+
+    20% {
+        transform: translateX(0);
+    }
+
+    /* Pausa inicial para lectura */
+    80% {
+        transform: translateX(calc(-100% + 50px));
+    }
+
+    /* Desplazamiento */
+    100% {
+        transform: translateX(calc(-100% + 50px));
+    }
+}
+
+.calendar-event-container {
+    width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    position: relative;
+}
+
+.calendar-event-marquee {
+    display: inline-block;
+    animation: marquee 6s linear infinite alternate;
+    /* Animación automática */
+}
+
+/* Premium Scrollbar Styles */
+.premium-scrollbar::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+}
+
+.premium-scrollbar::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 4px;
+}
+
+.premium-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(0, 71, 186, 0.2);
+    border-radius: 4px;
+}
+
+.premium-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 71, 186, 0.5);
 }
