@@ -16,7 +16,52 @@ const AdminCourses = () => {
     const [lessons, setLessons] = useState([])
     const [loadingLessons, setLoadingLessons] = useState(false)
     const [newLesson, setNewLesson] = useState({ title: '', type: 'video', url: '', description: '' })
+    const [quizQuestions, setQuizQuestions] = useState([{ question: '', options: ['', ''], correctAnswer: 0 }])
     const [searchTerm, setSearchTerm] = useState('')
+
+    // Quiz Handlers
+    const handleQuestionChange = (index, field, value) => {
+        const newQuestions = [...quizQuestions];
+        newQuestions[index][field] = value;
+        setQuizQuestions(newQuestions);
+    };
+
+    const handleOptionChange = (qIndex, oIndex, value) => {
+        const newQuestions = [...quizQuestions];
+        newQuestions[qIndex].options[oIndex] = value;
+        setQuizQuestions(newQuestions);
+    };
+
+    const addOption = (qIndex) => {
+        const newQuestions = [...quizQuestions];
+        newQuestions[qIndex].options.push('');
+        setQuizQuestions(newQuestions);
+    };
+
+    const removeOption = (qIndex, oIndex) => {
+        const newQuestions = [...quizQuestions];
+        if (newQuestions[qIndex].options.length > 2) {
+            newQuestions[qIndex].options.splice(oIndex, 1);
+            if (newQuestions[qIndex].correctAnswer >= newQuestions[qIndex].options.length) {
+                newQuestions[qIndex].correctAnswer = newQuestions[qIndex].options.length - 1;
+            } else if (newQuestions[qIndex].correctAnswer === oIndex) {
+                newQuestions[qIndex].correctAnswer = 0;
+            }
+            setQuizQuestions(newQuestions);
+        }
+    };
+
+    const addQuestion = () => {
+        setQuizQuestions([...quizQuestions, { question: '', options: ['', ''], correctAnswer: 0 }]);
+    };
+
+    const removeQuestion = (qIndex) => {
+        if (quizQuestions.length > 1) {
+            const newQuestions = [...quizQuestions];
+            newQuestions.splice(qIndex, 1);
+            setQuizQuestions(newQuestions);
+        }
+    };
 
     const fetchCourses = useCallback(async () => {
         try {
@@ -109,6 +154,7 @@ const AdminCourses = () => {
         setSelectedCourse(course)
         setShowContentModal(true)
         setLessons([])
+        setQuizQuestions([{ question: '', options: ['', ''], correctAnswer: 0 }])
         await fetchLessons(course.id)
     }, [fetchLessons])
 
@@ -138,20 +184,7 @@ const AdminCourses = () => {
                         setNewLesson(prev => ({
                             ...prev,
                             type: format,
-                            url: format === 'quiz' ? `{
-  "questions": [
-    {
-      "question": "Pregunta Ejemplo: ¿Cuánto es 2 + 2?",
-      "options": ["6", "5", "4", "7"],
-      "correctAnswer": 2
-    },
-    {
-      "question": "Pregunta Ejemplo: ¿Cuánto es 2 + 2?",
-      "options": ["6", "5", "4", "7"],
-      "correctAnswer": 2
-    }
-  ]
-}` : ''
+                            url: ''
                         }))
                     }
                 }
@@ -166,6 +199,8 @@ const AdminCourses = () => {
         e.preventDefault()
         if (!selectedCourse) return
 
+        let finalUrl = newLesson.url;
+
         // Basic validation
         if (newLesson.type === 'video') {
             const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.?be)\/.+$/
@@ -174,19 +209,18 @@ const AdminCourses = () => {
                 return
             }
         } else if (newLesson.type === 'quiz') {
-            try {
-                JSON.parse(newLesson.url)
-            } catch {
-                alert('Formato JSON no válido para el cuestionario. Por favor, verifica tu sintaxis.')
+            if (quizQuestions.some(q => !q.question.trim() || q.options.some(o => !o.trim()))) {
+                alert('Por favor completa todas las preguntas y opciones del cuestionario.')
                 return
             }
+            finalUrl = JSON.stringify(quizQuestions)
         }
 
         try {
             const lessonData = {
                 course_id: selectedCourse.id,
                 title: newLesson.title,
-                video_url: newLesson.url,
+                video_url: finalUrl,
                 content_type: newLesson.type,
                 description: newLesson.description,
                 order: lessons.length + 1
@@ -201,6 +235,7 @@ const AdminCourses = () => {
 
             setLessons([...lessons, data[0]])
             setNewLesson({ title: '', type: 'video', url: '', description: '' })
+            setQuizQuestions([{ question: '', options: ['', ''], correctAnswer: 0 }])
         } catch (error) {
             alert('Error al agregar contenido: ' + error.message)
         }
@@ -610,18 +645,75 @@ const AdminCourses = () => {
                                                 </div>
 
                                                 {newLesson.type === 'quiz' ? (
-                                                    <div>
-                                                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: '700', color: '#64748b', letterSpacing: '0.3px' }}>Evaluación <span style={{ color: '#f97316' }}>(SIGA EL FORMATO ESTABLECIDO)</span></label>
-                                                        <textarea
-                                                            required
-                                                            rows="4"
-                                                            value={newLesson.url}
-                                                            onChange={e => setNewLesson({ ...newLesson, url: e.target.value })}
-                                                            style={{ width: '100%', padding: '1rem 1.25rem', borderRadius: '16px', border: '1.5px solid #e2e8f0', backgroundColor: '#f8fafc', fontSize: '0.85rem', outline: 'none', fontFamily: 'monospace', resize: 'vertical', color: '#475569', transition: 'all 0.2s' }}
-                                                            placeholder=""
-                                                            onFocus={(e) => { e.target.style.borderColor = '#f97316'; e.target.style.backgroundColor = 'white'; }}
-                                                            onBlur={(e) => { e.target.style.borderColor = '#e2e8f0'; e.target.style.backgroundColor = '#f8fafc'; }}
-                                                        />
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', backgroundColor: '#f8fafc', padding: '1.5rem', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                            <label style={{ display: 'block', margin: 0, fontSize: '0.95rem', fontWeight: '800', color: '#1e293b', letterSpacing: '0.3px' }}>Preguntas del Cuestionario</label>
+                                                            <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#f97316', backgroundColor: '#fff7ed', padding: '0.3rem 0.8rem', borderRadius: '10px' }}>{quizQuestions.length} PREGUNTA{quizQuestions.length !== 1 ? 'S' : ''}</span>
+                                                        </div>
+
+                                                        {quizQuestions.map((q, qIndex) => (
+                                                            <div key={qIndex} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem', backgroundColor: 'white', borderRadius: '16px', border: '1px solid #e2e8f0', position: 'relative', boxShadow: '0 4px 10px rgba(0,0,0,0.02)' }}>
+                                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                                    <div style={{ fontSize: '0.8rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>Pregunta {qIndex + 1}</div>
+                                                                    {quizQuestions.length > 1 && (
+                                                                        <button type="button" onClick={() => removeQuestion(qIndex)} style={{ padding: '0.3rem 0.6rem', backgroundColor: '#fef2f2', color: '#ef4444', border: 'none', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer' }}>
+                                                                            Eliminar
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+
+                                                                <input
+                                                                    type="text"
+                                                                    required
+                                                                    placeholder="Ej: ¿Qué es el DOM en el contexto de la web?"
+                                                                    value={q.question}
+                                                                    onChange={(e) => handleQuestionChange(qIndex, 'question', e.target.value)}
+                                                                    style={{ width: '100%', padding: '0.9rem', borderRadius: '12px', border: '1.5px solid #e2e8f0', backgroundColor: '#f8fafc', fontSize: '0.9rem', color: '#1e293b', fontWeight: '600', outline: 'none' }}
+                                                                    onFocus={(e) => { e.target.style.borderColor = '#f97316'; e.target.style.backgroundColor = 'white'; }}
+                                                                    onBlur={(e) => { e.target.style.borderColor = '#e2e8f0'; e.target.style.backgroundColor = '#f8fafc'; }}
+                                                                />
+
+                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem' }}>
+                                                                    <div style={{ fontSize: '0.75rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Opciones (Selecciona la correcta)</div>
+                                                                    {q.options.map((option, oIndex) => (
+                                                                        <div key={oIndex} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                                                            <input
+                                                                                type="radio"
+                                                                                name={`correct-${qIndex}`}
+                                                                                checked={q.correctAnswer === oIndex}
+                                                                                onChange={() => handleQuestionChange(qIndex, 'correctAnswer', oIndex)}
+                                                                                style={{ width: '18px', height: '18px', accentColor: '#f97316', cursor: 'pointer' }}
+                                                                            />
+                                                                            <input
+                                                                                type="text"
+                                                                                required
+                                                                                placeholder={`Opción ${oIndex + 1}`}
+                                                                                value={option}
+                                                                                onChange={(e) => handleOptionChange(qIndex, oIndex, e.target.value)}
+                                                                                style={{ flex: 1, padding: '0.8rem', borderRadius: '10px', border: `1.5px solid ${q.correctAnswer === oIndex ? '#fed7aa' : '#e2e8f0'}`, backgroundColor: q.correctAnswer === oIndex ? '#fff7ed' : 'white', fontSize: '0.85rem', color: '#1e293b', outline: 'none' }}
+                                                                                onFocus={(e) => { e.target.style.borderColor = '#f97316'; }}
+                                                                                onBlur={(e) => { e.target.style.borderColor = q.correctAnswer === oIndex ? '#fed7aa' : '#e2e8f0'; }}
+                                                                            />
+                                                                            {q.options.length > 2 && (
+                                                                                <button type="button" onClick={() => removeOption(qIndex, oIndex)} style={{ padding: '0.5rem', backgroundColor: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                                                                </button>
+                                                                            )}
+                                                                        </div>
+                                                                    ))}
+                                                                    {q.options.length < 5 && (
+                                                                        <button type="button" onClick={() => addOption(qIndex)} style={{ alignSelf: 'flex-start', padding: '0.5rem 0.8rem', backgroundColor: 'transparent', color: '#3b82f6', border: '1.5px dashed #93c5fd', borderRadius: '10px', fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer', marginTop: '0.25rem' }}>
+                                                                            + Añadir Opción
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        ))}
+
+                                                        <button type="button" onClick={addQuestion} style={{ width: '100%', padding: '1rem', backgroundColor: 'white', color: '#1e293b', border: '2px dashed #cbd5e1', borderRadius: '16px', fontSize: '0.9rem', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', transition: 'all 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#94a3b8'; e.currentTarget.style.backgroundColor = '#f1f5f9'; }} onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.backgroundColor = 'white'; }}>
+                                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                                            Añadir Nueva Pregunta
+                                                        </button>
                                                     </div>
                                                 ) : (
                                                     <div>
