@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabaseClient'
 import Sidebar from '../components/Sidebar'
 
 // Basic Quiz Component
-const QuizPlayer = ({ lessonData, courseId, dominantColor }) => {
+const QuizPlayer = ({ lessonData, courseId, dominantColor, onNextLesson, hasNextLesson }) => {
     const questions = useMemo(() => {
         if (lessonData?.video_url) {
             try {
@@ -43,6 +43,18 @@ const QuizPlayer = ({ lessonData, courseId, dominantColor }) => {
             const passed = newScore >= questions.length * 0.6
             if (passed && courseId) {
                 try {
+                    // Mark lesson as completed in localStorage to unlock next lesson
+                    const completedKey = `lms_completed_${courseId}`;
+                    const completedText = localStorage.getItem(completedKey) || '[]';
+                    const completed = JSON.parse(completedText);
+
+                    if (!completed.includes(lessonData.id)) {
+                        completed.push(lessonData.id);
+                        localStorage.setItem(completedKey, JSON.stringify(completed));
+                        // Dispatch event so parent can re-check locks
+                        window.dispatchEvent(new Event('lesson_completed'));
+                    }
+
                     const { data: { session } } = await supabase.auth.getSession()
                     if (session?.user) {
                         await supabase
@@ -82,30 +94,58 @@ const QuizPlayer = ({ lessonData, courseId, dominantColor }) => {
                 <p style={{ fontSize: '1.2rem', color: '#64748b', marginBottom: '2.5rem', maxWidth: '400px', margin: '0 auto 2.5rem' }}>
                     {passed ? 'Has completado este cuestionario con éxito y estas un paso más cerca de tu meta.' : 'Repasa un poco más el contenido y vuelve a intentarlo cuando estés listo.'}
                 </p>
-                <button
-                    onClick={() => {
-                        setCurrentQuestionIndex(0)
-                        setScore(0)
-                        setShowResult(false)
-                        setSelectedOption(null)
-                    }}
-                    style={{
-                        padding: '1.1rem 2.5rem',
-                        backgroundColor: '#0047ba',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '18px',
-                        cursor: 'pointer',
-                        fontSize: '1.1rem',
-                        fontWeight: '600',
-                        transition: 'all 0.3s ease',
-                        boxShadow: '0 8px 20px rgba(0, 71, 186, 0.25)'
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 12px 25px rgba(0, 71, 186, 0.35)'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 20px rgba(0, 71, 186, 0.25)'; }}
-                >
-                    Reiniciar cuestionario
-                </button>
+                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                    <button
+                        onClick={() => {
+                            setCurrentQuestionIndex(0)
+                            setScore(0)
+                            setShowResult(false)
+                            setSelectedOption(null)
+                        }}
+                        style={{
+                            padding: '1.1rem 2.5rem',
+                            backgroundColor: passed ? 'rgba(0, 71, 186, 0.1)' : '#0047ba',
+                            color: passed ? '#0047ba' : 'white',
+                            border: passed ? '2px solid rgba(0, 71, 186, 0.2)' : 'none',
+                            borderRadius: '18px',
+                            cursor: 'pointer',
+                            fontSize: '1.1rem',
+                            fontWeight: '600',
+                            transition: 'all 0.3s ease',
+                            boxShadow: passed ? 'none' : '0 8px 20px rgba(0, 71, 186, 0.25)'
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-3px)'; if (!passed) e.currentTarget.style.boxShadow = '0 12px 25px rgba(0, 71, 186, 0.35)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; if (!passed) e.currentTarget.style.boxShadow = '0 8px 20px rgba(0, 71, 186, 0.25)'; }}
+                    >
+                        Reiniciar cuestionario
+                    </button>
+
+                    {passed && hasNextLesson && (
+                        <button
+                            onClick={onNextLesson}
+                            style={{
+                                padding: '1.1rem 2.5rem',
+                                backgroundColor: '#10b981',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '18px',
+                                cursor: 'pointer',
+                                fontSize: '1.1rem',
+                                fontWeight: '600',
+                                transition: 'all 0.3s ease',
+                                boxShadow: '0 8px 20px rgba(16, 185, 129, 0.25)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem'
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 12px 25px rgba(16, 185, 129, 0.35)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 20px rgba(16, 185, 129, 0.25)'; }}
+                        >
+                            Siguiente Lección
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                        </button>
+                    )}
+                </div>
             </div>
         )
     }
@@ -212,6 +252,26 @@ const CourseViewer = () => {
     const [userRole, setUserRole] = useState(null)
     const [dominantColor, setDominantColor] = useState('rgba(0, 71, 186, 0.1)') // User profile color
     const [courseColor, setCourseColor] = useState('rgba(0, 71, 186, 0.5)') // Course theme color
+    const [completedLessons, setCompletedLessons] = useState([]);
+
+    // Check completed lessons
+    const updateCompletedLessons = useCallback(() => {
+        if (id) {
+            const completedKey = `lms_completed_${id}`;
+            const completedText = localStorage.getItem(completedKey) || '[]';
+            try {
+                setCompletedLessons(JSON.parse(completedText));
+            } catch (e) {
+                setCompletedLessons([]);
+            }
+        }
+    }, [id]);
+
+    useEffect(() => {
+        updateCompletedLessons();
+        window.addEventListener('lesson_completed', updateCompletedLessons);
+        return () => window.removeEventListener('lesson_completed', updateCompletedLessons);
+    }, [updateCompletedLessons]);
 
     // Function to extract dominant color from image
     const extractColor = useCallback((url, isProfile = false) => {
@@ -468,6 +528,13 @@ const CourseViewer = () => {
                                             lessonData={activeLesson}
                                             courseId={course.id}
                                             dominantColor={courseColor}
+                                            hasNextLesson={videoLessons.findIndex(l => l.id === activeLesson.id) < videoLessons.length - 1}
+                                            onNextLesson={() => {
+                                                const currentIndex = videoLessons.findIndex(l => l.id === activeLesson.id);
+                                                if (currentIndex < videoLessons.length - 1) {
+                                                    handleLessonClick(videoLessons[currentIndex + 1]);
+                                                }
+                                            }}
                                         />
                                     ) : (
                                         videoId ? (
@@ -587,54 +654,76 @@ const CourseViewer = () => {
                         <div style={{ flex: 1, overflowY: 'auto', padding: '1rem 1.5rem' }}>
                             {activeTab === 'lessons' ? (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                    {videoLessons.map((lesson, index) => (
-                                        <div
-                                            key={lesson.id}
-                                            onClick={() => handleLessonClick(lesson)}
-                                            style={{
-                                                padding: '1.25rem',
-                                                borderRadius: '20px',
-                                                cursor: 'pointer',
-                                                backgroundColor: activeLesson?.id === lesson.id ? courseColor.replace('0.5', '0.15') : 'rgba(255, 255, 255, 0.02)',
-                                                border: activeLesson?.id === lesson.id ? `1px solid ${courseColor.replace('0.5', '0.5')}` : '1px solid rgba(255, 255, 255, 0.05)',
-                                                transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                                                display: 'flex',
-                                                gap: '1rem',
-                                                alignItems: 'center',
-                                                boxShadow: activeLesson?.id === lesson.id ? `0 8px 20px rgba(0,0,0,0.2)` : 'none'
-                                            }}
-                                            onMouseEnter={(e) => { if (activeLesson?.id !== lesson.id) e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)'; }}
-                                            onMouseLeave={(e) => { if (activeLesson?.id !== lesson.id) e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.03)'; }}
-                                        >
-                                            <div style={{
-                                                width: '32px',
-                                                height: '32px',
-                                                borderRadius: '10px',
-                                                backgroundColor: activeLesson?.id === lesson.id ? courseColor.replace('0.5', '0.8') : 'rgba(255, 255, 255, 0.1)',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                fontSize: '0.85rem',
-                                                fontWeight: '900',
-                                                color: 'white'
-                                            }}>
-                                                {index + 1}
-                                            </div>
-                                            <div style={{ flex: 1 }}>
-                                                <div style={{ fontSize: '0.9rem', fontWeight: '700', color: activeLesson?.id === lesson.id ? 'white' : 'rgba(255, 255, 255, 0.8)', marginBottom: '0.2rem' }}>
-                                                    {lesson.title}
+                                    {videoLessons.map((lesson, index) => {
+                                        // A lesson is locked if ANY previous lesson was a quiz AND that quiz is not in completedLessons
+                                        let isLocked = false;
+                                        for (let i = 0; i < index; i++) {
+                                            const prevLesson = videoLessons[i];
+                                            if (prevLesson.content_type === 'quiz' && !completedLessons.includes(prevLesson.id)) {
+                                                isLocked = true;
+                                                break;
+                                            }
+                                        }
+
+                                        return (
+                                            <div
+                                                key={lesson.id}
+                                                onClick={() => {
+                                                    if (!isLocked) handleLessonClick(lesson);
+                                                }}
+                                                style={{
+                                                    padding: '1.25rem',
+                                                    borderRadius: '20px',
+                                                    cursor: isLocked ? 'not-allowed' : 'pointer',
+                                                    backgroundColor: activeLesson?.id === lesson.id ? courseColor.replace('0.5', '0.15') : 'rgba(255, 255, 255, 0.02)',
+                                                    border: activeLesson?.id === lesson.id ? `1px solid ${courseColor.replace('0.5', '0.5')}` : '1px solid rgba(255, 255, 255, 0.05)',
+                                                    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                    display: 'flex',
+                                                    gap: '1rem',
+                                                    alignItems: 'center',
+                                                    boxShadow: activeLesson?.id === lesson.id ? `0 8px 20px rgba(0,0,0,0.2)` : 'none',
+                                                    opacity: isLocked ? 0.4 : 1
+                                                }}
+                                                onMouseEnter={(e) => { if (!isLocked && activeLesson?.id !== lesson.id) e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)'; }}
+                                                onMouseLeave={(e) => { if (!isLocked && activeLesson?.id !== lesson.id) e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.03)'; }}
+                                            >
+                                                <div style={{
+                                                    width: '32px',
+                                                    height: '32px',
+                                                    borderRadius: '10px',
+                                                    backgroundColor: isLocked ? 'rgba(255, 255, 255, 0.05)' : activeLesson?.id === lesson.id ? courseColor.replace('0.5', '0.8') : 'rgba(255, 255, 255, 0.1)',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    fontSize: '0.85rem',
+                                                    fontWeight: '900',
+                                                    color: isLocked ? 'rgba(255, 255, 255, 0.3)' : 'white'
+                                                }}>
+                                                    {isLocked ? (
+                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                                    ) : (
+                                                        index + 1
+                                                    )}
                                                 </div>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                    <span style={{ fontSize: '0.65rem', color: activeLesson?.id === lesson.id ? 'var(--accent-gold)' : 'rgba(255, 255, 255, 0.4)', fontWeight: '700' }}>
-                                                        {lesson.content_type === 'quiz' ? '📝 Cuestionario' : '🎥 Sesión Video'}
-                                                    </span>
+                                                <div style={{ flex: 1 }}>
+                                                    <div style={{ fontSize: '0.9rem', fontWeight: '700', color: activeLesson?.id === lesson.id ? 'white' : 'rgba(255, 255, 255, 0.8)', marginBottom: '0.2rem' }}>
+                                                        {lesson.title}
+                                                    </div>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                        <span style={{ fontSize: '0.65rem', color: activeLesson?.id === lesson.id ? 'var(--accent-gold)' : 'rgba(255, 255, 255, 0.4)', fontWeight: '700' }}>
+                                                            {lesson.content_type === 'quiz' ? '📝 Cuestionario' : '🎥 Sesión Video'}
+                                                        </span>
+                                                        {completedLessons.includes(lesson.id) && lesson.content_type === 'quiz' && (
+                                                            <span style={{ fontSize: '0.65rem', color: '#10b981', fontWeight: '800' }}>✓ APROBADO</span>
+                                                        )}
+                                                    </div>
                                                 </div>
+                                                {activeLesson?.id === lesson.id && (
+                                                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--accent-gold)', boxShadow: '0 0 10px var(--accent-gold)' }}></div>
+                                                )}
                                             </div>
-                                            {activeLesson?.id === lesson.id && (
-                                                <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--accent-gold)', boxShadow: '0 0 10px var(--accent-gold)' }}></div>
-                                            )}
-                                        </div>
-                                    ))}
+                                        )
+                                    })}
                                 </div>
                             ) : (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>

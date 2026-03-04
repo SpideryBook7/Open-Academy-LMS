@@ -101,7 +101,7 @@ const Home = () => {
                     {/* Welcome Text */}
                     <div style={{ marginBottom: '3rem', animation: 'fadeInDown 0.8s cubic-bezier(0.23, 1, 0.32, 1) 0.1s both' }}>
                         <h2 style={{ fontSize: '2.5rem', fontWeight: '700', color: '#0f172a', marginBottom: '0.5rem', letterSpacing: '-1px' }}>
-                            Bienvenido a <span style={{ color: 'var(--accent-color)' }}>SIRA</span>
+                            Bienvenido a <span style={{ color: 'var(--accent-color)' }}>CONECTA</span>
                         </h2>
                         <p style={{ color: '#64748b', fontSize: '1.1rem', fontWeight: '500' }}>
                             Sistema de Información y Recursos Académicos
