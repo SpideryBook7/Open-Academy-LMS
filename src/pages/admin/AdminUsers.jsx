@@ -100,6 +100,13 @@ function AdminUsers() {
     const [selectedCourse, setSelectedCourse] = useState('');
     const [enrolling, setEnrolling] = useState(false);
 
+    // States for Material assign modal
+    const [showMaterialModal, setShowMaterialModal] = useState(false);
+    const [newMaterial, setNewMaterial] = useState({ title: '', url: '' });
+    const [assigningMaterial, setAssigningMaterial] = useState(false);
+    const [userMaterials, setUserMaterials] = useState([]);
+    const [loadingMaterials, setLoadingMaterials] = useState(false);
+
     useEffect(() => {
         fetchUsers();
         fetchCourses(); // Fetch courses when component mounts
@@ -193,27 +200,23 @@ function AdminUsers() {
         }
 
         try {
-            // First, delete enrollments (if no ON DELETE CASCADE is set)
-            const { error: errorEnroll } = await supabase
-                .from('enrollments')
-                .delete()
-                .eq('user_id', userId);
+            // Llama a la función RPC para eliminar al usuario completamente (incluyendo de auth.users)
+            // Nota: Esta función debe ser creada corriendo el script delete_user.sql en el SQL Editor de Supabase
+            const { data, error: rpcError } = await supabase.rpc('delete_user', { target_user_id: userId });
 
-            if (errorEnroll) throw errorEnroll;
+            if (rpcError) throw rpcError;
 
-            // Then, delete the profile
-            const { error: errorProf } = await supabase
-                .from('profiles')
-                .delete()
-                .eq('id', userId);
-
-            if (errorProf) throw errorProf;
+            // Revisar si la función de base de datos devolvió un error manejado (ej. RLS o permisos)
+            if (data && data.success === false) {
+                throw new Error(data.message || 'Error desconocido retornado por Supabase');
+            }
 
             alert(`Usuario ${userName} eliminado exitosamente.`);
             setUsers(users.filter(u => u.id !== userId));
 
         } catch (error) {
-            alert('Error al eliminar usuario: ' + error.message);
+            console.error('Error al eliminar usuario:', error);
+            alert('Error al eliminar usuario: ' + (error.message || 'Error desconocido'));
         }
     };
 
@@ -258,6 +261,68 @@ function AdminUsers() {
             alert('Error al inscribir usuario: ' + error.message);
         } finally {
             setEnrolling(false);
+        }
+    };
+
+    const handleOpenMaterialModal = async (user) => {
+        setSelectedUser(user);
+        setShowMaterialModal(true);
+        setNewMaterial({ title: '', url: '' });
+        fetchUserMaterials(user.id);
+    };
+
+    const fetchUserMaterials = async (userId) => {
+        setLoadingMaterials(true);
+        try {
+            const { data, error } = await supabase
+                .from('user_materials')
+                .select('*')
+                .eq('user_id', userId)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            setUserMaterials(data || []);
+        } catch (error) {
+            console.error('Error fetching materials:', error);
+        } finally {
+            setLoadingMaterials(false);
+        }
+    };
+
+    const handleAssignMaterial = async (e) => {
+        e.preventDefault();
+        if (!selectedUser) return;
+        setAssigningMaterial(true);
+        try {
+            const { error } = await supabase.from('user_materials').insert([
+                {
+                    user_id: selectedUser.id,
+                    title: newMaterial.title,
+                    category: 'Materiales extras',
+                    url: newMaterial.url
+                }
+            ]);
+
+            if (error) throw error;
+
+            alert('Material asignado exitosamente');
+            setNewMaterial({ title: '', url: '' });
+            fetchUserMaterials(selectedUser.id);
+        } catch (error) {
+            alert('Error al asignar material: ' + error.message);
+        } finally {
+            setAssigningMaterial(false);
+        }
+    };
+
+    const handleDeleteMaterial = async (materialId) => {
+        if (!window.confirm('¿Seguro que quieres eliminar este material?')) return;
+        try {
+            const { error } = await supabase.from('user_materials').delete().eq('id', materialId);
+            if (error) throw error;
+            fetchUserMaterials(selectedUser.id);
+        } catch (error) {
+            alert('Error al eliminar material: ' + error.message);
         }
     };
 
@@ -432,27 +497,48 @@ function AdminUsers() {
                                                 {new Date(user.created_at).toLocaleDateString()}
                                             </td>
                                             <td style={{ padding: '1.25rem', textAlign: 'center' }}>
-                                                <button
-                                                    onClick={() => handleDeleteUser(user.id, user.full_name || user.email)}
-                                                    style={{
-                                                        backgroundColor: '#fee2e2',
-                                                        color: '#ef4444',
-                                                        border: '1px solid #fecaca',
-                                                        borderRadius: '10px',
-                                                        padding: '0.5rem',
-                                                        cursor: 'pointer',
-                                                        transition: 'all 0.2s',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        margin: '0 auto'
-                                                    }}
-                                                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#fca5a5'; e.currentTarget.style.color = '#7f1d1d'; }}
-                                                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#fee2e2'; e.currentTarget.style.color = '#ef4444'; }}
-                                                    title="Eliminar usuario"
-                                                >
-                                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                                                </button>
+                                                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                                                    <button
+                                                        onClick={() => handleOpenMaterialModal(user)}
+                                                        style={{
+                                                            backgroundColor: '#eff6ff',
+                                                            color: '#3b82f6',
+                                                            border: '1px solid #bfdbfe',
+                                                            borderRadius: '10px',
+                                                            padding: '0.5rem',
+                                                            cursor: 'pointer',
+                                                            transition: 'all 0.2s',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                        }}
+                                                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#dbeafe'; e.currentTarget.style.color = '#2563eb'; }}
+                                                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#eff6ff'; e.currentTarget.style.color = '#3b82f6'; }}
+                                                        title="Asignar material"
+                                                    >
+                                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteUser(user.id, user.full_name || user.email)}
+                                                        style={{
+                                                            backgroundColor: '#fee2e2',
+                                                            color: '#ef4444',
+                                                            border: '1px solid #fecaca',
+                                                            borderRadius: '10px',
+                                                            padding: '0.5rem',
+                                                            cursor: 'pointer',
+                                                            transition: 'all 0.2s',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                        }}
+                                                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#fca5a5'; e.currentTarget.style.color = '#7f1d1d'; }}
+                                                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#fee2e2'; e.currentTarget.style.color = '#ef4444'; }}
+                                                        title="Eliminar usuario"
+                                                    >
+                                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
@@ -616,6 +702,68 @@ function AdminUsers() {
                                         </button>
                                     </div>
                                 </form>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Assign Material Modal */}
+                {showMaterialModal && (
+                    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(10px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100, animation: 'fadeIn 0.4s ease-out' }}>
+                        <div style={{ backgroundColor: 'white', padding: '2.5rem', borderRadius: '32px', width: '550px', maxWidth: '90%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15), 0 0 40px rgba(0, 0, 0, 0.05)', border: '1px solid rgba(255, 255, 255, 0.8)', position: 'relative', animation: 'scaleIn 0.4s cubic-bezier(0.165, 0.84, 0.44, 1)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                                    </div>
+                                    <h3 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1e293b' }}>Materiales</h3>
+                                </div>
+                                <button onClick={() => setShowMaterialModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}>
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                </button>
+                            </div>
+
+                            <p style={{ marginBottom: '1.5rem', color: '#64748b', fontSize: '1rem', fontWeight: '500' }}>
+                                Asignando a <strong style={{ color: '#1e293b' }}>{selectedUser?.full_name}</strong>
+                            </p>
+
+                            <form onSubmit={handleAssignMaterial} style={{ marginBottom: '2rem', padding: '1.5rem', backgroundColor: '#f8fafc', borderRadius: '20px', border: '1px solid #f1f5f9' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem', marginBottom: '1rem' }}>
+                                    <div>
+                                        <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', fontWeight: '600', color: '#64748b' }}>Título del material</label>
+                                        <input type="text" value={newMaterial.title} onChange={e => setNewMaterial({ ...newMaterial, title: e.target.value })} required placeholder="Ej. Presentación Módulo 1" style={{ width: '100%', padding: '0.7rem 1rem', borderRadius: '12px', border: '1.5px solid #e2e8f0', outline: 'none' }} />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', fontWeight: '600', color: '#64748b' }}>Enlace del documento (Drive)</label>
+                                        <input type="url" value={newMaterial.url} onChange={e => setNewMaterial({ ...newMaterial, url: e.target.value })} required placeholder="https://drive.google.com/..." style={{ width: '100%', padding: '0.7rem 1rem', borderRadius: '12px', border: '1.5px solid #e2e8f0', outline: 'none' }} />
+                                    </div>
+                                </div>
+                                <button type="submit" disabled={assigningMaterial} style={{ width: '100%', padding: '0.8rem', borderRadius: '12px', border: 'none', background: '#3b82f6', color: 'white', fontWeight: '600', cursor: assigningMaterial ? 'not-allowed' : 'pointer' }}>
+                                    {assigningMaterial ? 'Asignando...' : '+ Asignar Material'}
+                                </button>
+                            </form>
+
+                            <div>
+                                <h4 style={{ fontSize: '1.1rem', fontWeight: '700', color: '#1e293b', marginBottom: '1rem' }}>Materiales Asignados</h4>
+                                {loadingMaterials ? (
+                                    <p style={{ color: '#64748b', fontSize: '0.9rem' }}>Cargando materiales...</p>
+                                ) : userMaterials.length === 0 ? (
+                                    <p style={{ color: '#94a3b8', fontSize: '0.9rem', fontStyle: 'italic' }}>Este usuario aún no tiene materiales asignados.</p>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '150px', overflowY: 'auto', paddingRight: '0.5rem' }}>
+                                        {userMaterials.map(mat => (
+                                            <div key={mat.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '12px' }}>
+                                                <div>
+                                                    <p style={{ margin: 0, fontWeight: '600', color: '#1e293b', fontSize: '0.95rem' }}>{mat.title}</p>
+                                                    <p style={{ margin: 0, color: '#64748b', fontSize: '0.8rem', marginTop: '0.2rem' }}>Enlace a Drive</p>
+                                                </div>
+                                                <button onClick={() => handleDeleteMaterial(mat.id)} style={{ padding: '0.5rem', borderRadius: '8px', border: 'none', backgroundColor: '#fee2e2', color: '#ef4444', cursor: 'pointer' }}>
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

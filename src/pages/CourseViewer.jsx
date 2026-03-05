@@ -22,6 +22,23 @@ const QuizPlayer = ({ lessonData, courseId, dominantColor, onNextLesson, hasNext
     const [selectedOption, setSelectedOption] = useState(null)
     const [score, setScore] = useState(0)
     const [showResult, setShowResult] = useState(false)
+    const [finishing, setFinishing] = useState(false)
+    const [alreadyPassed, setAlreadyPassed] = useState(false)
+
+    useEffect(() => {
+        if (courseId && lessonData?.id) {
+            const completedKey = `lms_completed_${courseId}`;
+            const completedText = localStorage.getItem(completedKey) || '[]';
+            const completed = JSON.parse(completedText);
+
+            if (completed.includes(lessonData.id)) {
+                // If already completed, jump to result screen
+                setScore(questions.length); // Assume full score or just passing
+                setShowResult(true);
+                setAlreadyPassed(true);
+            }
+        }
+    }, [courseId, lessonData, questions.length]);
 
     const handleAnswer = (optionIndex) => {
         setSelectedOption(optionIndex)
@@ -54,19 +71,32 @@ const QuizPlayer = ({ lessonData, courseId, dominantColor, onNextLesson, hasNext
                         // Dispatch event so parent can re-check locks
                         window.dispatchEvent(new Event('lesson_completed'));
                     }
-
-                    const { data: { session } } = await supabase.auth.getSession()
-                    if (session?.user) {
-                        await supabase
-                            .from('enrollments')
-                            .update({ completed: true })
-                            .eq('course_id', courseId)
-                            .eq('user_id', session.user.id)
-                    }
+                    // NOTA: Ya no actualizamos la base de datos automáticamente aquí.
+                    // Ahora se actualiza solo si es la última lección y le da a 'Finalizar'.
                 } catch (error) {
-                    console.error("Error updating completion:", error)
+                    console.error("Error updating completion localStorage:", error)
                 }
             }
+        }
+    }
+
+    const handleFinishCourse = async () => {
+        setFinishing(true);
+        try {
+            const { data: { session } } = await supabase.auth.getSession()
+            if (session?.user) {
+                await supabase
+                    .from('enrollments')
+                    .update({ completed: true })
+                    .eq('course_id', courseId)
+                    .eq('user_id', session.user.id)
+            }
+            alert('¡Especialidad finalizada correctamente!');
+        } catch (error) {
+            console.error("Error updating completion:", error)
+            alert('Hubo un error al guardar tu progreso.');
+        } finally {
+            setFinishing(false);
         }
     }
 
@@ -74,6 +104,7 @@ const QuizPlayer = ({ lessonData, courseId, dominantColor, onNextLesson, hasNext
 
     if (showResult) {
         const passed = score >= questions.length * 0.6
+        const isFinal = passed && !hasNextLesson;
         return (
             <div style={{
                 padding: '4rem 2rem',
@@ -86,39 +117,42 @@ const QuizPlayer = ({ lessonData, courseId, dominantColor, onNextLesson, hasNext
             }}>
                 <div style={{ fontSize: '5rem', marginBottom: '1.5rem' }}>{passed ? '🏆' : '📚'}</div>
                 <h2 style={{ fontSize: '2.2rem', fontWeight: '800', marginBottom: '1rem', color: '#1e293b' }}>
-                    {passed ? '¡Excelente trabajo!' : 'Casi lo logras'}
+                    {isFinal ? '¡Felicidades, terminaste la especialidad!' : (passed ? '¡Excelente trabajo!' : 'Casi lo logras')}
                 </h2>
                 <div style={{ fontSize: '3.5rem', fontWeight: '900', color: passed ? '#10b981' : '#f59e0b', marginBottom: '1rem' }}>
                     {score} / {questions.length}
                 </div>
                 <p style={{ fontSize: '1.2rem', color: '#64748b', marginBottom: '2.5rem', maxWidth: '400px', margin: '0 auto 2.5rem' }}>
-                    {passed ? 'Has completado este cuestionario con éxito y estas un paso más cerca de tu meta.' : 'Repasa un poco más el contenido y vuelve a intentarlo cuando estés listo.'}
+                    {isFinal ? 'Has completado todos los materiales y evaluaciones de esta especialidad con éxito.' :
+                        (passed ? 'Has completado este cuestionario con éxito y estas un paso más cerca de tu meta.' : 'Repasa un poco más el contenido y vuelve a intentarlo cuando estés listo.')}
                 </p>
                 <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-                    <button
-                        onClick={() => {
-                            setCurrentQuestionIndex(0)
-                            setScore(0)
-                            setShowResult(false)
-                            setSelectedOption(null)
-                        }}
-                        style={{
-                            padding: '1.1rem 2.5rem',
-                            backgroundColor: passed ? 'rgba(0, 71, 186, 0.1)' : '#0047ba',
-                            color: passed ? '#0047ba' : 'white',
-                            border: passed ? '2px solid rgba(0, 71, 186, 0.2)' : 'none',
-                            borderRadius: '18px',
-                            cursor: 'pointer',
-                            fontSize: '1.1rem',
-                            fontWeight: '600',
-                            transition: 'all 0.3s ease',
-                            boxShadow: passed ? 'none' : '0 8px 20px rgba(0, 71, 186, 0.25)'
-                        }}
-                        onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-3px)'; if (!passed) e.currentTarget.style.boxShadow = '0 12px 25px rgba(0, 71, 186, 0.35)'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; if (!passed) e.currentTarget.style.boxShadow = '0 8px 20px rgba(0, 71, 186, 0.25)'; }}
-                    >
-                        Reiniciar cuestionario
-                    </button>
+                    {!isFinal && !alreadyPassed && (
+                        <button
+                            onClick={() => {
+                                setCurrentQuestionIndex(0)
+                                setScore(0)
+                                setShowResult(false)
+                                setSelectedOption(null)
+                            }}
+                            style={{
+                                padding: '1.1rem 2.5rem',
+                                backgroundColor: passed ? 'rgba(0, 71, 186, 0.1)' : '#0047ba',
+                                color: passed ? '#0047ba' : 'white',
+                                border: passed ? '2px solid rgba(0, 71, 186, 0.2)' : 'none',
+                                borderRadius: '18px',
+                                cursor: 'pointer',
+                                fontSize: '1.1rem',
+                                fontWeight: '600',
+                                transition: 'all 0.3s ease',
+                                boxShadow: passed ? 'none' : '0 8px 20px rgba(0, 71, 186, 0.25)'
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-3px)'; if (!passed) e.currentTarget.style.boxShadow = '0 12px 25px rgba(0, 71, 186, 0.35)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; if (!passed) e.currentTarget.style.boxShadow = '0 8px 20px rgba(0, 71, 186, 0.25)'; }}
+                        >
+                            Reiniciar cuestionario
+                        </button>
+                    )}
 
                     {passed && hasNextLesson && (
                         <button
@@ -143,6 +177,34 @@ const QuizPlayer = ({ lessonData, courseId, dominantColor, onNextLesson, hasNext
                         >
                             Siguiente Lección
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                        </button>
+                    )}
+
+                    {isFinal && (
+                        <button
+                            onClick={handleFinishCourse}
+                            disabled={finishing}
+                            style={{
+                                padding: '1.1rem 2.5rem',
+                                backgroundColor: '#10b981',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '18px',
+                                cursor: finishing ? 'not-allowed' : 'pointer',
+                                fontSize: '1.1rem',
+                                fontWeight: '600',
+                                transition: 'all 0.3s ease',
+                                boxShadow: '0 8px 20px rgba(16, 185, 129, 0.25)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                opacity: finishing ? 0.7 : 1
+                            }}
+                            onMouseEnter={(e) => { if (!finishing) { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 12px 25px rgba(16, 185, 129, 0.35)'; } }}
+                            onMouseLeave={(e) => { if (!finishing) { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 20px rgba(16, 185, 129, 0.25)'; } }}
+                        >
+                            {finishing ? 'Procesando...' : 'Finalizar Especialidad'}
+                            {!finishing && <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5L20 7"></path></svg>}
                         </button>
                     )}
                 </div>

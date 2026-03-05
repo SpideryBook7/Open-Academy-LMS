@@ -11,7 +11,7 @@ const Courses = () => {
     const [avatarUrl, setAvatarUrl] = useState('')
     const [userRole, setUserRole] = useState(null)
     const [searchQuery, setSearchQuery] = useState('')
-    const [filter, setFilter] = useState('Active') // Active, Completed
+    const [filter, setFilter] = useState('Activo') // Activo, Completado
     const [showFilterDropdown, setShowFilterDropdown] = useState(false)
     const [dominantColor, setDominantColor] = useState('rgba(0, 71, 186, 0.1)') // Default brand color
 
@@ -88,7 +88,7 @@ const Courses = () => {
                 // Fetch enrollments first, then courses (avoiding FK issue)
                 const { data: enrollmentData, error: enrollmentError } = await supabase
                     .from('enrollments')
-                    .select('id, course_id')
+                    .select('id, course_id, completed')
                     .eq('user_id', session.user.id)
 
                 if (enrollmentError) {
@@ -120,8 +120,8 @@ const Courses = () => {
                             title: course.title,
                             description: course.description,
                             image: course.thumbnail_url || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
-                            progress: Math.floor(Math.random() * 80) + 10,
-                            status: 'Active'
+                            progress: enrollment.completed ? 100 : Math.floor(Math.random() * 80) + 10,
+                            status: enrollment.completed ? 'Completado' : 'Activo'
                         }
                     }).filter(Boolean)
 
@@ -143,7 +143,7 @@ const Courses = () => {
 
     const filteredCourses = courses.filter(course => {
         const matchesSearch = course.title.toLowerCase().includes(searchQuery.toLowerCase())
-        const matchesFilter = filter === 'All' || course.status === filter
+        const matchesFilter = filter === 'Todos' || course.status === filter
         return matchesSearch && matchesFilter
     })
 

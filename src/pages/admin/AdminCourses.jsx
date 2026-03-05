@@ -113,9 +113,26 @@ const AdminCourses = () => {
     }
 
     const handleDeleteCourse = async (courseId) => {
-        if (!confirm('¿Estás seguro de que deseas eliminar este curso?')) return
+        if (!confirm('¿Estás seguro de que deseas eliminar este curso y todo su contenido (lecciones, inscripciones)?\n\nEsta acción no se puede deshacer.')) return
 
         try {
+            // Eliminar inscripciones asociadas para no dejar "Cursos desconocidos" en los usuarios
+            const { error: enrollmentsError } = await supabase
+                .from('enrollments')
+                .delete()
+                .eq('course_id', courseId)
+
+            if (enrollmentsError) console.error("Error deleting enrollments:", enrollmentsError);
+
+            // Eliminar lecciones del curso
+            const { error: lessonsError } = await supabase
+                .from('lessons')
+                .delete()
+                .eq('course_id', courseId)
+
+            if (lessonsError) console.error("Error deleting lessons:", lessonsError);
+
+            // Finalmente, eliminar el curso
             const { error } = await supabase
                 .from('courses')
                 .delete()

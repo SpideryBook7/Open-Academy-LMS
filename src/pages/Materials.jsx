@@ -49,19 +49,9 @@ const Materials = () => {
         }
     };
 
-    // Mock Data
-    const materials = [
-        // { id: 1, title: 'Diapositivas de Diseño Web.pdf', type: 'pdf', size: '12 MB', category: 'Documents' },
-        // { id: 2, title: 'Metodología Design Thinking.pptx', type: 'pptx', size: '4.5 MB', category: 'Documents' },
-        // { id: 3, title: 'Clase Magistral Módulo 1.video', type: 'video', size: 'MP4, 45 min', category: 'Videos' },
-        // { id: 4, title: 'Presupuesto del Proyecto Final.xlsx', type: 'xlsx', size: '1.2 MB', category: 'Documents' }, 
-        // { id: 5, title: 'Guía de Escritura Creativa.docx', type: 'docx', size: '2.8 MB', category: 'Documents' },
-        // { id: 6, title: 'Podcast del Curso - Episodio 1.audio', type: 'audio', size: 'MP3, 20 min', category: 'Audio' },
-        // { id: 7, title: 'Resumen Semanal de Notas.xls', type: 'xls', size: '850 KB', category: 'Documents' },
-        // { id: 8, title: 'Presentación de Bienvenida.ppt', type: 'ppt', size: '3.2 MB', category: 'Documents' },
-        // { id: 9, title: 'Manual de Usuario SIRA.pdf', type: 'pdf', size: '5.4 MB', category: 'Documents' },
-        // { id: 10, title: 'Ejercicios de Programación.doc', type: 'doc', size: '1.5 MB', category: 'Documents' },
-    ]
+    // User Materials State
+    const [materials, setMaterials] = useState([])
+    const [loadingMaterials, setLoadingMaterials] = useState(true)
 
     useEffect(() => {
         const getUser = async () => {
@@ -83,66 +73,62 @@ const Materials = () => {
                     setUserRole(data.role)
                     if (data.avatar_url) extractColor(data.avatar_url)
                 }
+
+                // Fetch User Materials from Supabase
+                const fetchUserMaterials = async () => {
+                    try {
+                        const { data: materialsData, error } = await supabase
+                            .from('user_materials')
+                            .select('*')
+                            .eq('user_id', session.user.id)
+                            .order('created_at', { ascending: false });
+
+                        if (error) {
+                            console.error('Error al cargar materiales:', error);
+                        } else {
+                            setMaterials(materialsData || []);
+                        }
+                    } catch (err) {
+                        console.error('Exception fetching materials:', err);
+                    } finally {
+                        setLoadingMaterials(false);
+                    }
+                };
+
+                fetchUserMaterials();
             }
         }
         getUser()
     }, [navigate])
 
-    const filteredMaterials = activeTab === 'All Files'
-        ? materials
-        : materials.filter(m => m.category === activeTab)
+    const filteredMaterials = materials; // All materials are now considered general "Materiales extras"
 
-    const getIcon = (type) => {
-        const t = type.toLowerCase();
+    const getIcon = () => {
+        // Enlaces generales de Drive o Internet usan un estilo predeterminado azul/verde
+        const color = '#34a853'; // Google Drive green
         const iconStyle = {
             width: '32px',
             height: '32px',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            color: color
         };
-
-        // Mapeo selectivo para react-file-icon
-        let extension = t;
-        if (t === 'video') extension = 'mp4';
-        if (t === 'audio') extension = 'mp3';
 
         return (
             <div style={iconStyle}>
-                <FileIcon
-                    extension={extension}
-                    {...defaultStyles[extension]}
-                    color={
-                        t === 'pdf' ? '#ef4444' :
-                            (t === 'doc' || t === 'docx') ? '#38bdf8' :
-                                (t === 'xls' || t === 'xlsx') ? '#22c55e' :
-                                    (t === 'ppt' || t === 'pptx') ? '#f97316' :
-                                        t === 'video' ? '#1e40af' :
-                                            t === 'audio' ? '#8b5cf6' : '#64748b'
-                    }
-                />
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
             </div>
         );
     }
 
     const MaterialCard = ({ file, index }) => {
-        const fileColors = {
-            'pdf': '#ef4444',      // Red
-            'ppt': '#f97316',      // Orange
-            'pptx': '#f97316',     // Orange
-            'doc': '#38bdf8',      // Light Blue
-            'docx': '#38bdf8',     // Light Blue
-            'xls': '#22c55e',      // Green
-            'xlsx': '#22c55e',     // Green
-            'video': '#1e40af',    // Dark Blue
-            'audio': '#8b5cf6',    // Purple
-            'default': '#64748b'   // Gray
-        };
-        const color = fileColors[file.type.toLowerCase()] || fileColors.default;
+        const color = '#34a853'; // Google Drive green
 
         return (
             <div
                 className="marquee-container"
+                onClick={() => window.open(file.url, '_blank')}
                 style={{
                     backgroundColor: 'white',
                     borderRadius: '24px',
@@ -228,7 +214,7 @@ const Materials = () => {
                     transition: 'all 0.4s ease',
                     boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
                 }}>
-                    {getIcon(file.type)}
+                    {getIcon()}
                 </div>
 
                 {/* Center/Right Side: Info */}
@@ -250,10 +236,10 @@ const Materials = () => {
                             border: `1px solid ${color}33`,
                             letterSpacing: '0.5px'
                         }}>
-                            {file.type}
+                            Drive Doc
                         </span>
-                        <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#64748b' }}>
-                            {file.size}
+                        <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '150px' }}>
+                            {file.url}
                         </span>
                     </div>
                 </div>
@@ -380,63 +366,29 @@ const Materials = () => {
                         </div>
                     </div>
 
-                    {/* Tabs and Sort Row */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid rgba(255, 255, 255, 0.79)', marginBottom: '2.5rem', animation: 'fadeInUp 0.8s ease-out 0.2s both' }}>
-                        <div style={{ display: 'flex', gap: '1rem' }}>
-                            {['Todos', 'Documentos', 'Videos', 'Audios'].map(tab => (
-                                <button
-                                    key={tab}
-                                    onClick={() => setActiveTab(tab === 'Todos' ? 'All Files' : (tab === 'Documentos' ? 'Documents' : (tab === 'Audios' ? 'Audio' : tab)))}
-                                    style={{
-                                        border: 'none',
-                                        background: 'none',
-                                        fontSize: '1rem',
-                                        fontWeight: (activeTab === 'All Files' && tab === 'Todos') || (activeTab === 'Documents' && tab === 'Documentos') || (activeTab === 'Audio' && tab === 'Audios') || activeTab === tab ? '700' : '500',
-                                        color: (activeTab === 'All Files' && tab === 'Todos') || (activeTab === 'Documents' && tab === 'Documentos') || (activeTab === 'Audio' && tab === 'Audios') || activeTab === tab ? '#ffffff' : '#ffffff91',
-                                        cursor: 'pointer',
-                                        padding: '0.5rem 0.5rem 1rem',
-                                        borderBottom: (activeTab === 'All Files' && tab === 'Todos') || (activeTab === 'Documents' && tab === 'Documentos') || (activeTab === 'Audio' && tab === 'Audios') || activeTab === tab ? `3px solid ${dominantColor.replace('0.5', '0.8')}` : '3px solid transparent',
-                                        marginBottom: '-2px',
-                                        transition: 'all 0.2s'
-                                    }}
-                                >
-                                    {tab}
-                                </button>
-                            ))}
-                        </div>
-
-                        <button style={{
-                            display: 'flex', alignItems: 'center', gap: '0.6rem',
-                            padding: '0.6rem 1.25rem', backgroundColor: 'white', border: 'none', borderRadius: '10px',
-                            color: 'var(--accent-color)', fontSize: '0.85rem', cursor: 'pointer',
-                            boxShadow: '0 4px 6px rgba(0,0,0,0.05)', fontWeight: '700',
-                            marginBottom: '0.5rem'
-                        }}>
-                            Ordenar por: Recientes <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                        </button>
+                    {/* Section Title */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid rgba(255, 255, 255, 0.79)', marginBottom: '2.5rem', animation: 'fadeInUp 0.8s ease-out 0.2s both', paddingBottom: '1rem' }}>
+                        <h2 style={{ fontSize: '1.75rem', fontWeight: '800', color: '#ffffff', margin: 0 }}>Documentos Extras</h2>
                     </div>
 
                     {/* All Materials Grid */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '1.5rem', marginBottom: '4rem' }}>
-                        {filteredMaterials.map((file, idx) => (
-                            <MaterialCard key={file.id} file={file} index={idx} />
-                        ))}
-                    </div>
-
-                    {/* Recent Section - Only visible in "All Files" */}
-                    {activeTab === 'All Files' && (
-                        <div style={{ animation: 'fadeInUp 0.8s ease-out 0.4s both' }}>
-                            <div style={{ marginBottom: '2rem', borderBottom: '2px solid rgba(255,255,255,0.2)', paddingBottom: '1rem' }}>
-                                <h2 style={{ fontSize: '1.75rem', fontWeight: '700', color: '#ffffff' }}>Materiales Recientes</h2>
-                            </div>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '1.5rem' }}>
-                                {materials.slice(0, 4).map((file, idx) => (
-                                    <MaterialCard key={`recent-${file.id}`} file={file} index={idx} />
-                                ))}
-                            </div>
+                    {loadingMaterials ? (
+                        <div style={{ textAlign: 'center', padding: '4rem 0', color: '#ffffff' }}>
+                            <p style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>Cargando materiales...</p>
+                        </div>
+                    ) : filteredMaterials.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '4rem 0', color: '#ffffff99' }}>
+                            <p style={{ fontSize: '1.2rem' }}>No tienes materiales en esta categoría.</p>
+                        </div>
+                    ) : (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '1.5rem', marginBottom: '4rem' }}>
+                            {filteredMaterials.map((file, idx) => (
+                                <MaterialCard key={file.id} file={file} index={idx} />
+                            ))}
                         </div>
                     )}
+
+
                 </div>
 
                 {/* <footer style={{ 
