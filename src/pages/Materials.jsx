@@ -9,7 +9,6 @@ const Materials = () => {
     const [avatarUrl, setAvatarUrl] = useState(null)
     const [userRole, setUserRole] = useState(null)
     const [dominantColor, setDominantColor] = useState('rgba(0, 71, 186, 0.5)')
-    const [activeTab, setActiveTab] = useState('All Files')
 
     // Function to extract dominant color from image
     const extractColor = (url) => {
@@ -52,6 +51,16 @@ const Materials = () => {
     // User Materials State
     const [materials, setMaterials] = useState([])
     const [loadingMaterials, setLoadingMaterials] = useState(true)
+    const [courseResources, setCourseResources] = useState([])
+    const [loadingCourseResources, setLoadingCourseResources] = useState(true)
+    const [expandedCourses, setExpandedCourses] = useState({})
+
+    const toggleCourseExpansion = (courseId) => {
+        setExpandedCourses(prev => ({
+            ...prev,
+            [courseId]: !prev[courseId]
+        }))
+    }
 
     useEffect(() => {
         const getUser = async () => {
@@ -95,17 +104,61 @@ const Materials = () => {
                     }
                 };
 
+                // Fetch User Courses & Resources
+                const fetchCourseResources = async () => {
+                    try {
+                        const { data: enrollmentData } = await supabase
+                            .from('enrollments')
+                            .select('course_id')
+                            .eq('user_id', session.user.id)
+                            
+                        if (enrollmentData && enrollmentData.length > 0) {
+                            const courseIds = enrollmentData.map(e => e.course_id)
+                            
+                            const { data: coursesData } = await supabase
+                                .from('courses')
+                                .select('id, title')
+                                .in('id', courseIds)
+                                
+                            const { data: resourcesData } = await supabase
+                                .from('lessons')
+                                .select('id, course_id, title, description, video_url, content_type')
+                                .in('course_id', courseIds)
+                                .in('content_type', ['link', 'pdf', 'document', 'audio', 'file'])
+                                
+                            if (coursesData && resourcesData) {
+                                const organized = coursesData.map(course => {
+                                    return {
+                                        ...course,
+                                        resources: resourcesData.filter(r => r.course_id === course.id).map(r => ({
+                                            ...r,
+                                            url: r.video_url || '#'
+                                        }))
+                                    }
+                                }).filter(c => c.resources.length > 0)
+                                
+                                setCourseResources(organized)
+                            }
+                        }
+                    } catch (err) {
+                        console.error('Error fetching course resources:', err)
+                    } finally {
+                        setLoadingCourseResources(false)
+                    }
+                }
+
                 fetchUserMaterials();
+                fetchCourseResources();
             }
         }
         getUser()
     }, [navigate])
 
-    const filteredMaterials = materials; // All materials are now considered general "Materiales extras"
+    const filteredMaterials = materials.filter(m => m.category === 'Materiales extras' || !m.category);
+    const certificationsMaterials = materials.filter(m => m.category === 'Certificaciones');
 
-    const getIcon = () => {
-        // Enlaces generales de Drive o Internet usan un estilo predeterminado azul/verde
-        const color = '#34a853'; // Google Drive green
+    const getIcon = (isCertification = false) => {
+        const color = isCertification ? '#f59e0b' : '#34a853';
         const iconStyle = {
             width: '32px',
             height: '32px',
@@ -115,6 +168,14 @@ const Materials = () => {
             color: color
         };
 
+        if (isCertification) {
+            return (
+                <div style={iconStyle}>
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>
+                </div>
+            );
+        }
+
         return (
             <div style={iconStyle}>
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
@@ -122,8 +183,8 @@ const Materials = () => {
         );
     }
 
-    const MaterialCard = ({ file, index }) => {
-        const color = '#34a853'; // Google Drive green
+    const MaterialCard = ({ file, index, isCertification = false }) => {
+        const color = isCertification ? '#f59e0b' : '#34a853';
 
         return (
             <div
@@ -214,7 +275,7 @@ const Materials = () => {
                     transition: 'all 0.4s ease',
                     boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
                 }}>
-                    {getIcon()}
+                    {getIcon(isCertification)}
                 </div>
 
                 {/* Center/Right Side: Info */}
@@ -236,7 +297,7 @@ const Materials = () => {
                             border: `1px solid ${color}33`,
                             letterSpacing: '0.5px'
                         }}>
-                            Drive Doc
+                            {isCertification ? 'Certificado' : 'Drive Doc'}
                         </span>
                         <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '150px' }}>
                             {file.url}
@@ -368,10 +429,10 @@ const Materials = () => {
 
                     {/* Section Title */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid rgba(255, 255, 255, 0.79)', marginBottom: '2.5rem', animation: 'fadeInUp 0.8s ease-out 0.2s both', paddingBottom: '1rem' }}>
-                        <h2 style={{ fontSize: '1.75rem', fontWeight: '800', color: '#ffffff', margin: 0 }}>Documentos Extras</h2>
+                        <h2 style={{ fontSize: '1.75rem', fontWeight: '700', color: '#ffffff', margin: 0 }}>Material Extra</h2>
                     </div>
 
-                    {/* All Materials Grid */}
+                    {/* All Resources Grid */}
                     {loadingMaterials ? (
                         <div style={{ textAlign: 'center', padding: '4rem 0', color: '#ffffff' }}>
                             <p style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>Cargando materiales...</p>
@@ -388,6 +449,96 @@ const Materials = () => {
                         </div>
                     )}
 
+                    {/* Todos los Recursos Section */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid rgba(255, 255, 255, 0.79)', marginBottom: '2.5rem', marginTop: '2.5rem', animation: 'fadeInUp 0.8s ease-out 0.3s both', paddingBottom: '1rem' }}>
+                        <h2 style={{ fontSize: '1.75rem', fontWeight: '700', color: '#ffffff', margin: 0 }}>Recursos de Especialidades</h2>
+                    </div>
+                    
+                    {loadingCourseResources ? (
+                        <div style={{ textAlign: 'center', padding: '4rem 0', color: '#ffffff' }}>
+                            <p style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>Cargando recursos...</p>
+                        </div>
+                    ) : courseResources.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '4rem 0', color: '#ffffff99', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '24px', border: '1px dashed rgba(255,255,255,0.1)' }}>
+                            <p style={{ fontSize: '1.2rem' }}>Aún no hay recursos generales disponibles para tus especialidades.</p>
+                        </div>
+                    ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '4rem' }}>
+                            {courseResources.map((course, idx) => (
+                                <div key={course.id} style={{
+                                    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                                    borderRadius: '24px',
+                                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                                    overflow: 'hidden',
+                                    animation: `fadeInUp 0.6s ease-out ${0.3 + idx * 0.1}s both`
+                                }}>
+                                    {/* Accordion Header */}
+                                    <div 
+                                        onClick={() => toggleCourseExpansion(course.id)}
+                                        style={{ 
+                                            padding: '1.5rem', 
+                                            display: 'flex', 
+                                            justifyContent: 'space-between', 
+                                            alignItems: 'center', 
+                                            cursor: 'pointer',
+                                            backgroundColor: expandedCourses[course.id] ? 'rgba(255,255,255,0.05)' : 'transparent',
+                                            transition: 'background-color 0.3s ease'
+                                        }}
+                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.08)'}
+                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = expandedCourses[course.id] ? 'rgba(255,255,255,0.05)' : 'transparent'}
+                                    >
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                                            <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: 'var(--accent-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', boxShadow: '0 4px 15px rgba(0, 71, 186, 0.3)' }}>
+                                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                                            </div>
+                                            <div>
+                                                <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#fff', margin: 0 }}>{course.title}</h3>
+                                                <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)', margin: 0, marginTop: '4px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                                    {course.resources.length} {course.resources.length === 1 ? 'recurso' : 'recursos'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                            <div style={{ color: 'rgba(255,255,255,0.8)', transition: 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)', transform: expandedCourses[course.id] ? 'rotate(180deg)' : 'rotate(0deg)', backgroundColor: 'rgba(255,255,255,0.05)', padding: '0.6rem', borderRadius: '50%' }}>
+                                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Accordion Content */}
+                                    <div style={{ 
+                                        maxHeight: expandedCourses[course.id] ? '2000px' : '0', 
+                                        opacity: expandedCourses[course.id] ? 1 : 0,
+                                        overflow: 'hidden',
+                                        transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                                    }}>
+                                        <div style={{ padding: '0 1.5rem 1.5rem 1.5rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.25rem' }}>
+                                            {course.resources.map((res, i) => (
+                                                <MaterialCard key={res.id} file={res} index={i} />
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Mis Certificaciones Section */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid rgba(255, 255, 255, 0.79)', marginBottom: '2.5rem', marginTop: '4rem', animation: 'fadeInUp 0.8s ease-out 0.4s both', paddingBottom: '1rem' }}>
+                        <h2 style={{ fontSize: '1.75rem', fontWeight: '700', color: '#ffffff', margin: 0 }}>Mis Certificaciones</h2>
+                    </div>
+
+                    {certificationsMaterials.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '4rem 0', color: '#ffffff99', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '24px', border: '1px dashed rgba(255,255,255,0.1)', marginBottom: '4rem' }}>
+                            <p style={{ fontSize: '1.2rem' }}>Aún no has obtenido ninguna certificación.</p>
+                        </div>
+                    ) : (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '1.5rem', marginBottom: '4rem' }}>
+                            {certificationsMaterials.map((file, idx) => (
+                                <MaterialCard key={file.id} file={file} index={idx} isCertification={true} />
+                            ))}
+                        </div>
+                    )}
 
                 </div>
 

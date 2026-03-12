@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import Sidebar from '../components/Sidebar'
+import confetti from 'canvas-confetti'
 
 // Basic Quiz Component
 const QuizPlayer = ({ lessonData, courseId, dominantColor, onNextLesson, hasNextLesson }) => {
@@ -23,7 +24,6 @@ const QuizPlayer = ({ lessonData, courseId, dominantColor, onNextLesson, hasNext
     const [score, setScore] = useState(0)
     const [showResult, setShowResult] = useState(false)
     const [finishing, setFinishing] = useState(false)
-    const [alreadyPassed, setAlreadyPassed] = useState(false)
 
     useEffect(() => {
         if (courseId && lessonData?.id) {
@@ -32,10 +32,19 @@ const QuizPlayer = ({ lessonData, courseId, dominantColor, onNextLesson, hasNext
             const completed = JSON.parse(completedText);
 
             if (completed.includes(lessonData.id)) {
-                // If already completed, jump to result screen
-                setScore(questions.length); // Assume full score or just passing
+                // Read score from localStorage or fallback
+                const scoreDataText = localStorage.getItem(`lms_score_${courseId}_${lessonData.id}`);
+                if (scoreDataText) {
+                    try {
+                        const scoreData = JSON.parse(scoreDataText);
+                        setScore(scoreData.score);
+                    } catch {
+                        setScore(questions.length);
+                    }
+                } else {
+                    setScore(questions.length);
+                }
                 setShowResult(true);
-                setAlreadyPassed(true);
             }
         }
     }, [courseId, lessonData, questions.length]);
@@ -60,6 +69,9 @@ const QuizPlayer = ({ lessonData, courseId, dominantColor, onNextLesson, hasNext
             const passed = newScore >= questions.length * 0.6
             if (passed && courseId) {
                 try {
+                    // Save score
+                    localStorage.setItem(`lms_score_${courseId}_${lessonData.id}`, JSON.stringify({ score: newScore, total: questions.length }));
+
                     // Mark lesson as completed in localStorage to unlock next lesson
                     const completedKey = `lms_completed_${courseId}`;
                     const completedText = localStorage.getItem(completedKey) || '[]';
@@ -100,7 +112,15 @@ const QuizPlayer = ({ lessonData, courseId, dominantColor, onNextLesson, hasNext
         }
     }
 
-    if (questions.length === 0) return <div style={{ padding: '3rem', textAlign: 'center', color: 'white', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '24px' }}>Cargando cuestionario...</div>
+    if (!questions || questions.length === 0) {
+        return (
+            <div style={{ padding: '4rem 2rem', textAlign: 'center', backgroundColor: 'rgba(255, 255, 255, 0.05)', borderRadius: '32px', color: 'white' }}>
+                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📝</div>
+                <h3>Cuestionario en preparación</h3>
+                <p style={{ opacity: 0.7 }}>Este cuestionario aún no tiene preguntas configuradas.</p>
+            </div>
+        )
+    }
 
     if (showResult) {
         const passed = score >= questions.length * 0.6
@@ -127,32 +147,30 @@ const QuizPlayer = ({ lessonData, courseId, dominantColor, onNextLesson, hasNext
                         (passed ? 'Has completado este cuestionario con éxito y estas un paso más cerca de tu meta.' : 'Repasa un poco más el contenido y vuelve a intentarlo cuando estés listo.')}
                 </p>
                 <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-                    {!isFinal && !alreadyPassed && (
-                        <button
-                            onClick={() => {
-                                setCurrentQuestionIndex(0)
-                                setScore(0)
-                                setShowResult(false)
-                                setSelectedOption(null)
-                            }}
-                            style={{
-                                padding: '1.1rem 2.5rem',
-                                backgroundColor: passed ? 'rgba(0, 71, 186, 0.1)' : '#0047ba',
-                                color: passed ? '#0047ba' : 'white',
-                                border: passed ? '2px solid rgba(0, 71, 186, 0.2)' : 'none',
-                                borderRadius: '18px',
-                                cursor: 'pointer',
-                                fontSize: '1.1rem',
-                                fontWeight: '600',
-                                transition: 'all 0.3s ease',
-                                boxShadow: passed ? 'none' : '0 8px 20px rgba(0, 71, 186, 0.25)'
-                            }}
-                            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-3px)'; if (!passed) e.currentTarget.style.boxShadow = '0 12px 25px rgba(0, 71, 186, 0.35)'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; if (!passed) e.currentTarget.style.boxShadow = '0 8px 20px rgba(0, 71, 186, 0.25)'; }}
-                        >
-                            Reiniciar cuestionario
-                        </button>
-                    )}
+                    <button
+                        onClick={() => {
+                            setCurrentQuestionIndex(0)
+                            setScore(0)
+                            setShowResult(false)
+                            setSelectedOption(null)
+                        }}
+                        style={{
+                            padding: '1.1rem 2.5rem',
+                            backgroundColor: passed ? 'rgba(0, 71, 186, 0.1)' : '#0047ba',
+                            color: passed ? '#0047ba' : 'white',
+                            border: passed ? '2px solid rgba(0, 71, 186, 0.2)' : 'none',
+                            borderRadius: '18px',
+                            cursor: 'pointer',
+                            fontSize: '1.1rem',
+                            fontWeight: '600',
+                            transition: 'all 0.3s ease',
+                            boxShadow: passed ? 'none' : '0 8px 20px rgba(0, 71, 186, 0.25)'
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-3px)'; if (!passed) e.currentTarget.style.boxShadow = '0 12px 25px rgba(0, 71, 186, 0.35)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; if (!passed) e.currentTarget.style.boxShadow = '0 8px 20px rgba(0, 71, 186, 0.25)'; }}
+                    >
+                        {passed ? 'Reiniciar Evaluación' : 'Reintentar Evaluación'}
+                    </button>
 
                     {passed && hasNextLesson && (
                         <button
@@ -229,16 +247,16 @@ const QuizPlayer = ({ lessonData, courseId, dominantColor, onNextLesson, hasNext
                     <h3 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1e293b' }}>Pregunta {currentQuestionIndex + 1} de {questions.length}</h3>
                 </div>
                 <div style={{ width: '60px', height: '60px', borderRadius: '50%', border: `4px solid ${dominantColor.replace('0.5', '0.1')}`, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-                    <span style={{ fontSize: '1rem', fontWeight: '700', color: '#1e293b' }}>{Math.round(((currentQuestionIndex + 1) / questions.length) * 100)}%</span>
+                    <span style={{ fontSize: '1rem', fontWeight: '700', color: '#1e293b' }}>{Math.round((currentQuestionIndex / questions.length) * 100)}%</span>
                 </div>
             </div>
 
             <p style={{ fontSize: '1.35rem', marginBottom: '2.5rem', color: '#334155', fontWeight: '700', lineHeight: '1.4' }}>
-                {currentQuestion.question}
+                {currentQuestion?.question}
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', marginBottom: '3rem' }}>
-                {currentQuestion.options.map((option, index) => (
+                {currentQuestion?.options?.map((option, index) => (
                     <button
                         key={index}
                         onClick={() => handleAnswer(index)}
@@ -262,6 +280,7 @@ const QuizPlayer = ({ lessonData, courseId, dominantColor, onNextLesson, hasNext
                         <div style={{
                             width: '28px',
                             height: '28px',
+                            flexShrink: 0,
                             borderRadius: '50%',
                             border: `2px solid ${selectedOption === index ? '#0047ba' : '#cbd5e1'}`,
                             display: 'flex',
@@ -270,7 +289,7 @@ const QuizPlayer = ({ lessonData, courseId, dominantColor, onNextLesson, hasNext
                             backgroundColor: selectedOption === index ? '#0047ba' : 'transparent',
                             transition: 'all 0.3s'
                         }}>
-                            {selectedOption === index && <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'white' }}></div>}
+                            {selectedOption === index && <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'white' }}></div>}
                         </div>
                         {option}
                     </button>
@@ -312,9 +331,11 @@ const CourseViewer = () => {
     const [activeTab, setActiveTab] = useState('lessons') // 'lessons' (videos/quizzes) or 'materials' (links)
     const [avatarUrl, setAvatarUrl] = useState('')
     const [userRole, setUserRole] = useState(null)
+    const [userName, setUserName] = useState('Usuario')
     const [dominantColor, setDominantColor] = useState('rgba(0, 71, 186, 0.1)') // User profile color
     const [courseColor, setCourseColor] = useState('rgba(0, 71, 186, 0.5)') // Course theme color
     const [completedLessons, setCompletedLessons] = useState([]);
+    const [showCompletionOverlay, setShowCompletionOverlay] = useState(false);
 
     // Check completed lessons
     const updateCompletedLessons = useCallback(() => {
@@ -323,7 +344,8 @@ const CourseViewer = () => {
             const completedText = localStorage.getItem(completedKey) || '[]';
             try {
                 setCompletedLessons(JSON.parse(completedText));
-            } catch (e) {
+            } catch (error) {
+                console.error('Error parsing completed lessons:', error);
                 setCompletedLessons([]);
             }
         }
@@ -396,6 +418,7 @@ const CourseViewer = () => {
                 if (profileData) {
                     setAvatarUrl(profileData.avatar_url)
                     setUserRole(profileData.role)
+                    setUserName(session.user.user_metadata?.full_name || session.user.user_metadata?.name || 'Usuario')
                     if (profileData.avatar_url) extractColor(profileData.avatar_url, true)
                 }
 
@@ -410,6 +433,23 @@ const CourseViewer = () => {
                 setCourse(courseData)
                 if (courseData.thumbnail_url) extractColor(courseData.thumbnail_url, false)
 
+                // 1.5 Fetch Enrollment to sync progress (Check if it's a new enrollment to reset local progress)
+                const { data: enrollmentData } = await supabase
+                    .from('enrollments')
+                    .select('id')
+                    .eq('course_id', id)
+                    .eq('user_id', session.user.id)
+                    .single();
+
+                if (enrollmentData) {
+                    const storedEnrollmentId = localStorage.getItem(`lms_enrollment_id_${id}`);
+                    if (storedEnrollmentId && storedEnrollmentId !== String(enrollmentData.id)) {
+                        localStorage.removeItem(`lms_completed_${id}`);
+                        localStorage.removeItem(`lms_last_active_lesson_${id}`);
+                    }
+                    localStorage.setItem(`lms_enrollment_id_${id}`, String(enrollmentData.id));
+                }
+
                 // 2. Fetch Lessons
                 const { data: lessonsData, error: lessonsError } = await supabase
                     .from('lessons')
@@ -420,11 +460,16 @@ const CourseViewer = () => {
                 if (lessonsError) throw lessonsError
                 setLessons(lessonsData || [])
 
-                // Set first content as active if available
+                // Set first content as active if available, but check for a saved lesson first
                 if (lessonsData && lessonsData.length > 0) {
-                    const firstContent = lessonsData.find(l => l.content_type === 'video' || l.content_type === 'quiz' || !l.content_type)
-                    if (firstContent) {
-                        setActiveLesson(firstContent)
+                    const savedLessonId = localStorage.getItem(`lms_last_active_lesson_${id}`);
+                    const savedLesson = savedLessonId ? lessonsData.find(l => String(l.id) === String(savedLessonId)) : null;
+                    
+                    if (savedLesson) {
+                        setActiveLesson(savedLesson);
+                    } else {
+                        const firstContent = lessonsData.find(l => l.content_type === 'video' || l.content_type === 'quiz' || !l.content_type);
+                        if (firstContent) setActiveLesson(firstContent);
                     }
                 }
 
@@ -439,10 +484,35 @@ const CourseViewer = () => {
         if (id) {
             fetchCourseDetails()
         }
-    }, [id, navigate, extractColor])
+    }, [id, navigate, extractColor, updateCompletedLessons])
+
+    const markLessonAsCompleted = React.useCallback((lessonId) => {
+        if (!course?.id) return;
+        const completedKey = `lms_completed_${course.id}`;
+        const completedText = localStorage.getItem(completedKey) || '[]';
+        try {
+            const completed = JSON.parse(completedText);
+            if (!completed.includes(lessonId)) {
+                completed.push(lessonId);
+                localStorage.setItem(completedKey, JSON.stringify(completed));
+                window.dispatchEvent(new Event('lesson_completed'));
+                updateCompletedLessons();
+            }
+        } catch (e) {
+            console.error("Error saving progress", e)
+        }
+    }, [course?.id, updateCompletedLessons])
 
     const handleLessonClick = (lesson) => {
         setActiveLesson(lesson)
+        if (id && lesson?.id) {
+            localStorage.setItem(`lms_last_active_lesson_${id}`, lesson.id);
+        }
+        // Only auto-mark as completed if it's NOT a quiz and NOT a video (like materials/links)
+        // Videos are now handled by YouTube API below
+        if (lesson.content_type === 'link') {
+            markLessonAsCompleted(lesson.id);
+        }
     }
 
     // Helper to get YouTube ID
@@ -459,13 +529,183 @@ const CourseViewer = () => {
     const videoLessons = lessons.filter(l => l.content_type === 'video' || l.content_type === 'quiz' || !l.content_type)
     const materialResources = lessons.filter(l => l.content_type === 'link')
 
+    const playerRef = React.useRef(null);
+    const trackingRef = React.useRef(null);
+
+    useEffect(() => {
+        // Only run this if we have a video and we are NOT in a quiz
+        if (!videoId || activeLesson?.content_type === 'quiz') {
+            // If we switch to a quiz, we MUST destroy the player because the container will be unmounted
+            if (playerRef.current) {
+                try {
+                    if (typeof playerRef.current.destroy === 'function') playerRef.current.destroy();
+                } catch (e) { console.warn("Error destroying player:", e); }
+                playerRef.current = null;
+            }
+            return;
+        }
+
+        // Load YouTube API script if missing
+        if (!window.YT) {
+            const tag = document.createElement('script');
+            tag.src = "https://www.youtube.com/iframe_api";
+            document.head.appendChild(tag);
+        }
+
+        const onPlayerStateChange = (event) => {
+            if (event.data === window.YT.PlayerState.PLAYING) startTracking();
+            else stopTracking();
+        };
+
+        const startTracking = () => {
+            stopTracking();
+            trackingRef.current = setInterval(() => {
+                const player = playerRef.current;
+                if (player && typeof player.getCurrentTime === 'function') {
+                    const currentTime = player.getCurrentTime();
+                    const duration = player.getDuration();
+                    
+                    if (currentTime > 0) {
+                        localStorage.setItem(`lms_video_time_${activeLesson.id}`, currentTime.toString());
+                    }
+
+                    if (duration > 0 && (currentTime / duration) >= 0.8) {
+                        markLessonAsCompleted(activeLesson.id);
+                        stopTracking();
+                    }
+                }
+            }, 3000);
+        };
+
+        const stopTracking = () => {
+            if (trackingRef.current) clearInterval(trackingRef.current);
+        };
+
+        const initPlayer = () => {
+            const startTime = Math.floor(parseFloat(localStorage.getItem(`lms_video_time_${activeLesson.id}`) || '0'));
+            const container = document.getElementById('youtube-player');
+            
+            if (!container) return; // Wait for next tick/render
+
+            if (playerRef.current && typeof playerRef.current.loadVideoById === 'function') {
+                playerRef.current.loadVideoById({
+                    videoId: videoId,
+                    startSeconds: startTime
+                });
+            } else {
+                playerRef.current = new window.YT.Player('youtube-player', {
+                    videoId: videoId,
+                    playerVars: { 'autoplay': 0, 'rel': 0, 'modestbranding': 1, 'start': startTime, 'enablejsapi': 1 },
+                    events: { 'onStateChange': onPlayerStateChange }
+                });
+            }
+        };
+
+        if (window.YT && window.YT.Player) {
+            initPlayer();
+        } else {
+            const prevOnReady = window.onYouTubeIframeAPIReady;
+            window.onYouTubeIframeAPIReady = () => {
+                if (prevOnReady) prevOnReady();
+                initPlayer();
+            };
+        }
+
+        return () => {
+            stopTracking();
+            // Important: we destroy it if the video changes to avoid conflicts with React's DOM management
+            if (playerRef.current) {
+                try {
+                    if (typeof playerRef.current.destroy === 'function') playerRef.current.destroy();
+                } catch (e) {
+                    console.warn("YouTube player destroy error:", e);
+                }
+                playerRef.current = null;
+            }
+        };
+    }, [videoId, activeLesson?.id, activeLesson?.content_type, markLessonAsCompleted]);
+
+    const getQuizScoreStatus = useCallback((lesson) => {
+        if (!completedLessons.includes(lesson.id) || lesson.content_type !== 'quiz') return null;
+        try {
+            const scoreDataText = localStorage.getItem(`lms_score_${course?.id}_${lesson.id}`);
+            if (scoreDataText) {
+                const scoreData = JSON.parse(scoreDataText);
+                return `✓ Aprobado con ${scoreData.score}/${scoreData.total}`;
+            }
+            // Fallback si no está guardado el score en localStorage
+            const questions = JSON.parse(lesson.content || '[]');
+            if (questions && questions.length > 0) {
+                // Asumimos score completo si lo pasó antes de esta actualización
+                return `✓ Aprobado con ${questions.length}/${questions.length}`;
+            }
+        } catch (e) { console.warn("Could not parse score", e); }
+        return '✓ Aprobado';
+    }, [completedLessons, course?.id]);
+
+    useEffect(() => {
+        if (loading || lessons.length === 0 || completedLessons.length === 0) return;
+        
+        const allLessonsCompleted = lessons.every(l => completedLessons.includes(l.id));
+        const hasOverlayBeenShown = localStorage.getItem(`lms_completion_shown_${id}`);
+        
+        if (allLessonsCompleted && !hasOverlayBeenShown) {
+            setShowCompletionOverlay(true);
+            localStorage.setItem(`lms_completion_shown_${id}`, 'true');
+            // Shoot confetti
+            const duration = 5 * 1000;
+            const end = Date.now() + duration;
+
+            const frame = () => {
+                confetti({
+                    particleCount: 5, angle: 60, spread: 55, origin: { x: 0 },
+                    colors: ['#2478ffff', '#2ef01dff', '#ff7b00ff', '#ff0000ff', '#ff00d4ff'],
+                    zIndex: 10000
+                });
+                confetti({
+                    particleCount: 5, angle: 120, spread: 55, origin: { x: 1 },
+                    colors: ['#2478ffff', '#2ef01dff', '#ff7b00ff', '#ff0000ff', '#ff00d4ff'],
+                    zIndex: 10000
+                });
+
+                if (Date.now() < end) {
+                    requestAnimationFrame(frame);
+                }
+            };
+            frame();
+        }
+    }, [completedLessons, lessons, loading, id]);
+
+
     if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#f8fafc', color: '#64748b' }}>Cargando contenido...</div>
 
-    if (!course) return null
+    if (!course) return null;
+    if (!activeLesson) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', color: 'white' }}>Cargando lección...</div>
 
     return (
         <div style={{ backgroundColor: 'var(--background-color)', minHeight: '100vh', display: 'flex', position: 'relative', overflow: 'hidden' }}>
             <Sidebar />
+
+            {showCompletionOverlay && (
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(16px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'fadeIn 0.5s ease-out' }}>
+                    <div style={{ backgroundColor: 'rgba(255,255,255,0.98)', padding: '4rem 3rem', borderRadius: '32px', maxWidth: '600px', textAlign: 'center', position: 'relative', overflow: 'hidden', boxShadow: '0 25px 50px rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.2)' }}>
+                        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎉🎈</div>
+                        <h2 style={{ fontSize: '2rem', fontWeight: '800', color: '#1e293b', marginBottom: '1rem' }}>¡Felicidades! <br />¡Concluiste la Especialidad de {course.title}!</h2>
+                        <p style={{ fontSize: '1rem', color: '#475569', marginBottom: '1.5rem', lineHeight: '1.6' }}>
+                            ¡Felicidades por tu dedicación! Has completado exitosamente todas las lecciones y evaluaciones de esta especialidad.
+                        </p>
+                        <div style={{ padding: '1rem', backgroundColor: '#eff6ff', borderRadius: '20px', border: '1px solid #bfdbfe', marginBottom: '2.5rem' }}>
+                            <p style={{ color: '#1d4ed8', fontWeight: '600', fontSize: '1rem', margin: 0 }}>
+                                🎓 En unos días, la constancia de tu especialidad estará disponible en la sección de Materiales.
+                            </p>
+                        </div>
+                        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                            <button onClick={() => setShowCompletionOverlay(false)} style={{ padding: '1rem 2rem', backgroundColor: 'transparent', border: '2px solid #cbd5e1', borderRadius: '18px', color: '#2e2e2eff', fontWeight: '600', fontSize: '1rem', cursor: 'pointer', transition: 'all 0.3s ease' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 47, 47, 0.34)' }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}>Cerrar</button>
+                            <button onClick={() => { setShowCompletionOverlay(false); navigate('/materials'); }} style={{ padding: '1rem 2rem', backgroundColor: '#10b948ff', border: 'none', borderRadius: '18px', color: 'white', fontWeight: '600', fontSize: '1rem', cursor: 'pointer', boxShadow: '0 10px 20px rgba(16, 185, 38, 0.3)', transition: 'all 0.3s ease' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-3px)' }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)' }}>Ir a Materiales</button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Premium Decorative Glows */}
             <div style={{ position: 'absolute', top: '-5%', right: '-5%', width: '600px', height: '600px', borderRadius: '50%', background: `radial-gradient(circle, ${dominantColor.replace('0.5', '0.12')} 0%, transparent 70%)`, filter: 'blur(80px)', pointerEvents: 'none', zIndex: 0, transition: 'all 0.8s ease' }}></div>
@@ -544,7 +784,7 @@ const CourseViewer = () => {
                     >
                         <div style={{ position: 'relative' }}>
                             <img
-                                src={avatarUrl || `https://ui-avatars.com/api/?name=User&background=random`}
+                                src={avatarUrl || `https://ui-avatars.com/api/?name=${userName || 'Usuario'}&background=random`}
                                 style={{
                                     width: '48px',
                                     height: '48px',
@@ -557,7 +797,7 @@ const CourseViewer = () => {
                             />
                         </div>
                         <div style={{ textAlign: 'left' }}>
-                            <p style={{ fontSize: '0.95rem', fontWeight: '700', color: '#ffffff', marginBottom: '0px' }}>Usuario</p>
+                            <p style={{ fontSize: '0.95rem', fontWeight: '700', color: '#ffffff', marginBottom: '0px' }}>{userName}</p>
                             <span style={{ fontSize: '0.7rem', color: 'rgba(255, 255, 255, 0.85)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                                 {userRole === 'admin' ? 'Administrador' : 'Estudiante'}
                             </span>
@@ -600,16 +840,9 @@ const CourseViewer = () => {
                                         />
                                     ) : (
                                         videoId ? (
-                                            <iframe
-                                                width="100%"
-                                                height="100%"
-                                                src={`https://www.youtube.com/embed/${videoId}?autoplay=0&rel=0&modestbranding=1`}
-                                                title={activeLesson.title}
-                                                frameBorder="0"
-                                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                                allowFullScreen
-                                                style={{ position: 'absolute', top: 0, left: 0 }}
-                                            ></iframe>
+                                            <div key={`video-${activeLesson.id}`} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
+                                                <div id="youtube-player" style={{ width: '100%', height: '100%' }}></div>
+                                            </div>
                                         ) : (
                                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'white', gap: '1rem' }}>
                                                 <div style={{ fontSize: '3rem' }}>🚫</div>
@@ -672,44 +905,60 @@ const CourseViewer = () => {
 
                         {/* Tabs Navigation: More color */}
                         <div style={{ display: 'flex', padding: '1.5rem 1.5rem 0', gap: '0.75rem' }}>
-                            <button
-                                onClick={() => setActiveTab('lessons')}
-                                style={{
-                                    flex: 1,
-                                    padding: '1rem 0.5rem',
-                                    borderRadius: '16px',
-                                    backgroundColor: activeTab === 'lessons' ? courseColor.replace('0.5', '0.25') : 'rgba(255, 255, 255, 0.03)',
-                                    color: activeTab === 'lessons' ? 'white' : 'rgba(255, 255, 255, 0.4)',
-                                    fontWeight: '500',
-                                    fontSize: '0.85rem',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                    letterSpacing: '1px',
-                                    border: activeTab === 'lessons' ? `1px solid ${courseColor.replace('0.5', '0.6')}` : '1px solid transparent',
-                                    boxShadow: activeTab === 'lessons' ? `0 4px 15px ${courseColor.replace('0.5', '0.2')}` : 'none'
-                                }}
-                            >
-                                Sesiones ({videoLessons.length})
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('materials')}
-                                style={{
-                                    flex: 1,
-                                    padding: '1rem 0.5rem',
-                                    borderRadius: '16px',
-                                    backgroundColor: activeTab === 'materials' ? courseColor.replace('0.5', '0.25') : 'rgba(255, 255, 255, 0.03)',
-                                    color: activeTab === 'materials' ? 'white' : 'rgba(255, 255, 255, 0.4)',
-                                    fontWeight: '500',
-                                    fontSize: '0.85rem',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                    letterSpacing: '1px',
-                                    border: activeTab === 'materials' ? `1px solid ${courseColor.replace('0.5', '0.6')}` : '1px solid transparent',
-                                    boxShadow: activeTab === 'materials' ? `0 4px 15px ${courseColor.replace('0.5', '0.2')}` : 'none'
-                                }}
-                            >
-                                Recursos ({materialResources.length})
-                            </button>
+                            {(() => {
+                                const hasPendingLessons = videoLessons.some(l => !completedLessons.includes(l.id));
+                                const hasPendingMaterials = materialResources.some(l => !completedLessons.includes(l.id));
+                                return (
+                                    <>
+                                        <button
+                                            onClick={() => setActiveTab('lessons')}
+                                            style={{
+                                                flex: 1,
+                                                padding: '1rem 0.5rem',
+                                                borderRadius: '16px',
+                                                backgroundColor: activeTab === 'lessons' ? courseColor.replace('0.5', '0.25') : 'rgba(255, 255, 255, 0.03)',
+                                                color: activeTab === 'lessons' ? 'white' : 'rgba(255, 255, 255, 0.4)',
+                                                fontWeight: '500',
+                                                fontSize: '0.85rem',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                letterSpacing: '1px',
+                                                border: activeTab === 'lessons' ? `1px solid ${courseColor.replace('0.5', '0.6')}` : '1px solid transparent',
+                                                boxShadow: activeTab === 'lessons' ? `0 4px 15px ${courseColor.replace('0.5', '0.2')}` : 'none',
+                                                position: 'relative'
+                                            }}
+                                        >
+                                            Sesiones ({videoLessons.length})
+                                            {hasPendingLessons && (
+                                                <div style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#3b82f6', boxShadow: '0 0 8px #3b82f6' }}></div>
+                                            )}
+                                        </button>
+                                        <button
+                                            onClick={() => setActiveTab('materials')}
+                                            style={{
+                                                flex: 1,
+                                                padding: '1rem 0.5rem',
+                                                borderRadius: '16px',
+                                                backgroundColor: activeTab === 'materials' ? courseColor.replace('0.5', '0.25') : 'rgba(255, 255, 255, 0.03)',
+                                                color: activeTab === 'materials' ? 'white' : 'rgba(255, 255, 255, 0.4)',
+                                                fontWeight: '500',
+                                                fontSize: '0.85rem',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                letterSpacing: '1px',
+                                                border: activeTab === 'materials' ? `1px solid ${courseColor.replace('0.5', '0.6')}` : '1px solid transparent',
+                                                boxShadow: activeTab === 'materials' ? `0 4px 15px ${courseColor.replace('0.5', '0.2')}` : 'none',
+                                                position: 'relative'
+                                            }}
+                                        >
+                                            Recursos ({materialResources.length})
+                                            {hasPendingMaterials && (
+                                                <div style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#3b82f6', boxShadow: '0 0 8px #3b82f6' }}></div>
+                                            )}
+                                        </button>
+                                    </>
+                                );
+                            })()}
                         </div>
 
                         {/* Playlist Content */}
@@ -776,13 +1025,15 @@ const CourseViewer = () => {
                                                             {lesson.content_type === 'quiz' ? '📝 Cuestionario' : '🎥 Sesión Video'}
                                                         </span>
                                                         {completedLessons.includes(lesson.id) && lesson.content_type === 'quiz' && (
-                                                            <span style={{ fontSize: '0.65rem', color: '#10b981', fontWeight: '800' }}>✓ APROBADO</span>
+                                                            <span style={{ fontSize: '0.65rem', color: '#10b981', fontWeight: '800' }}>{getQuizScoreStatus(lesson)}</span>
                                                         )}
                                                     </div>
                                                 </div>
-                                                {activeLesson?.id === lesson.id && (
-                                                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--accent-gold)', boxShadow: '0 0 10px var(--accent-gold)' }}></div>
-                                                )}
+                                                <div style={{
+                                                    width: '10px', height: '10px', borderRadius: '50%',
+                                                    backgroundColor: completedLessons.includes(lesson.id) ? '#10b981' : 'var(--accent-gold)',
+                                                    boxShadow: completedLessons.includes(lesson.id) ? '0 0 10px #10b981' : '0 0 10px var(--accent-gold)'
+                                                }}></div>
                                             </div>
                                         )
                                     })}
@@ -799,15 +1050,18 @@ const CourseViewer = () => {
                                                 border: '1px solid rgba(255, 255, 255, 0.1)',
                                                 display: 'flex',
                                                 flexDirection: 'column',
-                                                gap: '1rem'
+                                                gap: '1rem',
+                                                position: 'relative'
                                             }}
                                         >
-                                            <div style={{ fontSize: '0.95rem', fontWeight: '800', color: 'white' }}>{resource.title}</div>
+                                            <div style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', width: '10px', height: '10px', borderRadius: '50%', backgroundColor: completedLessons.includes(resource.id) ? '#10b981' : 'var(--accent-gold)', boxShadow: completedLessons.includes(resource.id) ? '0 0 10px #10b981' : '0 0 10px var(--accent-gold)' }}></div>
+                                            <div style={{ fontSize: '0.95rem', fontWeight: '800', color: 'white', paddingRight: '1.5rem' }}>{resource.title}</div>
                                             <p style={{ fontSize: '0.8rem', color: 'rgba(255, 255, 255, 0.66)', margin: 0, lineHeight: '1.5' }}>{resource.description || 'Recurso adicional para complementar tu aprendizaje.'}</p>
                                             <a
                                                 href={resource.video_url}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
+                                                onClick={() => markLessonAsCompleted(resource.id)}
                                                 style={{
                                                     display: 'flex',
                                                     alignItems: 'center',
@@ -826,13 +1080,13 @@ const CourseViewer = () => {
                                                 onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
                                                 onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'; e.currentTarget.style.transform = 'translateY(0)'; }}
                                             >
-                                                🔗 Acceder Material
+                                                🔗 Acceder al Recurso
                                             </a>
                                         </div>
                                     ))}
                                     {materialResources.length === 0 && (
                                         <div style={{ padding: '3rem 1rem', textAlign: 'center', color: 'rgba(255, 255, 255, 0.65)', fontSize: '0.9rem', fontWeight: '600' }}>
-                                            No se han compartido materiales por el momento.
+                                            No se han compartido recursos por el momento.
                                         </div>
                                     )}
                                 </div>

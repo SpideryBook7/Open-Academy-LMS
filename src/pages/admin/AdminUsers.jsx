@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { supabase } from '../../lib/supabaseClient'
 import AdminSidebar from '../../components/AdminSidebar'
 
-const ExpandableEnrollments = ({ enrollments, getCourseTitle, onEnrollClick }) => {
+const ExpandableEnrollments = ({ enrollments, getCourseTitle, onEnrollClick, onUnenrollClick }) => {
     const [isExpanded, setIsExpanded] = useState(false);
 
     // Fallback safety
@@ -15,11 +15,68 @@ const ExpandableEnrollments = ({ enrollments, getCourseTitle, onEnrollClick }) =
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', alignItems: 'flex-start' }}>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
                 {visibleEnrollments.map((enrollment, idx) => (
-                    <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', backgroundColor: '#f8fafc', padding: '0.3rem 0.75rem', borderRadius: '10px', border: '1px solid #e2e8f0', whiteSpace: 'nowrap' }}>
-                        <span style={{ fontSize: '0.75rem', color: '#475569', fontWeight: '600' }}>
+                    <div 
+                        key={idx} 
+                        style={{ 
+                            position: 'relative', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '0.4rem', 
+                            backgroundColor: enrollment.completed ? '#00ff44' : '#f8fafc', 
+                            background: enrollment.completed ? 'linear-gradient(90deg, #16a34a, #22c55e, #86f09d, #22c55e, #16a34a)' : '#f8fafc',
+                            backgroundSize: '200% 100%',
+                            animation: enrollment.completed ? 'shine 2s infinite linear' : 'none',
+                            padding: '0.35rem 0.8rem', 
+                            borderRadius: '12px', 
+                            border: enrollment.completed ? '1.5px solid #16a34a' : '1px solid #e2e8f0', 
+                            whiteSpace: 'nowrap', 
+                            cursor: 'default',
+                            boxShadow: enrollment.completed ? '0 0 15px rgba(34, 197, 94, 0.6), inset 0 0 5px rgba(255, 255, 255, 0.4)' : 'none',
+                            transition: 'all 0.3s'
+                        }}
+                        onMouseEnter={(e) => {
+                            const btn = e.currentTarget.querySelector('.unenroll-btn');
+                            if (btn) btn.style.opacity = '1';
+                        }}
+                        onMouseLeave={(e) => {
+                            const btn = e.currentTarget.querySelector('.unenroll-btn');
+                            if (btn) btn.style.opacity = '0';
+                        }}
+                    >
+                        <span style={{ fontSize: '0.75rem', color: enrollment.completed ? '#ffffff' : '#475569', fontWeight: '800', textShadow: enrollment.completed ? '0 1px 2px rgba(0,0,0,0.2)' : 'none' }}>
                             {getCourseTitle(enrollment.course_id)}
                         </span>
-                        {enrollment.completed && <span title="Completado" style={{ fontSize: '0.8rem' }}>✅</span>}
+                        {enrollment.completed && <span title="Completado" style={{ fontSize: '0.9rem', filter: 'drop-shadow(0 0 3px rgba(102, 255, 0, 1))' }}>✅</span>}
+                        <button
+                            className="unenroll-btn"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onUnenrollClick(enrollment.course_id, getCourseTitle(enrollment.course_id));
+                            }}
+                            title="Desinscribir de la especialidad"
+                            style={{
+                                position: 'absolute',
+                                top: '-6px',
+                                right: '-6px',
+                                width: '16px',
+                                height: '16px',
+                                borderRadius: '50%',
+                                backgroundColor: '#dc2626',
+                                color: 'white',
+                                border: 'none',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                opacity: '0',
+                                transition: 'opacity 0.2s ease',
+                                padding: 0,
+                                zIndex: 10,
+                                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                            }}
+                        >
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
                     </div>
                 ))}
             </div>
@@ -102,7 +159,7 @@ function AdminUsers() {
 
     // States for Material assign modal
     const [showMaterialModal, setShowMaterialModal] = useState(false);
-    const [newMaterial, setNewMaterial] = useState({ title: '', url: '' });
+    const [newMaterial, setNewMaterial] = useState({ title: '', url: '', category: 'Materiales extras' });
     const [assigningMaterial, setAssigningMaterial] = useState(false);
     const [userMaterials, setUserMaterials] = useState([]);
     const [loadingMaterials, setLoadingMaterials] = useState(false);
@@ -264,10 +321,33 @@ function AdminUsers() {
         }
     };
 
+    const handleUnenrollUser = async (user, courseId, courseTitle) => {
+        if (!window.confirm(`¿Estás seguro de que deseas quitarle la especialidad "${courseTitle}" a ${user.full_name || user.email}?\n\nEsto eliminará su progreso y retirará su acceso a esta especialidad.`)) {
+            return;
+        }
+
+        try {
+            // Delete enrollment from DB
+            const { error: enrollError } = await supabase
+                .from('enrollments')
+                .delete()
+                .eq('user_id', user.id)
+                .eq('course_id', courseId);
+
+            if (enrollError) throw enrollError;
+
+            alert(`Especialidad retirada exitosamente.`);
+            fetchUsers();
+        } catch (error) {
+            console.error('Error al desinscribir usuario:', error);
+            alert('Error al desinscribir usuario: ' + (error.message || 'Error desconocido'));
+        }
+    };
+
     const handleOpenMaterialModal = async (user) => {
         setSelectedUser(user);
         setShowMaterialModal(true);
-        setNewMaterial({ title: '', url: '' });
+        setNewMaterial({ title: '', url: '', category: 'Materiales extras' });
         fetchUserMaterials(user.id);
     };
 
@@ -298,7 +378,7 @@ function AdminUsers() {
                 {
                     user_id: selectedUser.id,
                     title: newMaterial.title,
-                    category: 'Materiales extras',
+                    category: newMaterial.category,
                     url: newMaterial.url
                 }
             ]);
@@ -306,7 +386,7 @@ function AdminUsers() {
             if (error) throw error;
 
             alert('Material asignado exitosamente');
-            setNewMaterial({ title: '', url: '' });
+            setNewMaterial({ title: '', url: '', category: 'Materiales extras' });
             fetchUserMaterials(selectedUser.id);
         } catch (error) {
             alert('Error al asignar material: ' + error.message);
@@ -346,15 +426,19 @@ function AdminUsers() {
             <div style={{ position: 'absolute', top: '-10%', right: '-5%', width: '400px', height: '400px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%)', filter: 'blur(40px)', pointerEvents: 'none', zIndex: 0 }}></div>
             <div style={{ position: 'absolute', bottom: '10%', left: '20%', width: '300px', height: '300px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)', filter: 'blur(40px)', pointerEvents: 'none', zIndex: 0 }}></div>
 
-            <main style={{ marginLeft: '260px', flex: 1, padding: '3rem', display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1, minHeight: '100vh' }}>
+            <main style={{ marginLeft: '260px', flex: 1, padding: '3rem', display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1, minHeight: '100vh', maxWidth: 'calc(100vw - 260px)' }}>
                 <style>{`
                     @keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
                     @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
                     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
                     @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+                    @keyframes shine {
+                        0% { background-position: -100% 0; }
+                        100% { background-position: 200% 0; }
+                    }
                 `}</style>
 
-                <div style={{ flex: 1 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
                     <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3.5rem', animation: 'fadeInDown 0.8s ease-out' }}>
                         <div>
                             <h1 style={{ fontSize: '2.5rem', fontWeight: '800', color: '#ffffff', marginBottom: '0.25rem', letterSpacing: '-0.5px' }}>
@@ -426,7 +510,7 @@ function AdminUsers() {
                     >
                         {/* Wrapper para el scroll horizontal */}
                         <div style={{ width: '100%', overflowX: 'auto' }} className="premium-scrollbar">
-                            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '800px' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '1000px' }}>
                                 <thead style={{ backgroundColor: 'rgba(0,0,0,0.02)', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
                                     <tr>
                                         <th style={{ padding: '1.25rem', fontSize: '0.9rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Usuario</th>
@@ -466,6 +550,7 @@ function AdminUsers() {
                                                             setSelectedUser(user)
                                                             setShowEnrollModal(true)
                                                         }}
+                                                        onUnenrollClick={(courseId, courseTitle) => handleUnenrollUser(user, courseId, courseTitle)}
                                                     />
                                                 </div>
                                             </td>
@@ -514,7 +599,7 @@ function AdminUsers() {
                                                         }}
                                                         onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#dbeafe'; e.currentTarget.style.color = '#2563eb'; }}
                                                         onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#eff6ff'; e.currentTarget.style.color = '#3b82f6'; }}
-                                                        title="Asignar material"
+                                                        title="Asignar certificado o material"
                                                     >
                                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
                                                     </button>
@@ -658,7 +743,7 @@ function AdminUsers() {
 
                                 <form onSubmit={handleEnrollUser}>
                                     <div style={{ marginBottom: '2rem' }}>
-                                        <label style={{ display: 'block', marginBottom: '0.6rem', fontSize: '0.9rem', fontWeight: '600', color: '#64748b' }}>Seleccionar curso</label>
+                                        <label style={{ display: 'block', marginBottom: '0.6rem', fontSize: '0.9rem', fontWeight: '600', color: '#64748b' }}>Seleccionar especialidad</label>
                                         <div style={{ position: 'relative' }}>
                                             <select
                                                 value={selectedCourse}
@@ -668,14 +753,14 @@ function AdminUsers() {
                                                 onFocus={(e) => { e.target.style.borderColor = '#f97316'; e.target.style.backgroundColor = 'white'; }}
                                                 onBlur={(e) => { e.target.style.borderColor = '#f1f5f9'; e.currentTarget.style.backgroundColor = '#f8fafc'; }}
                                             >
-                                                <option value="">-- Elige un curso --</option>
+                                                <option value="">-- Elige una especialidad --</option>
                                                 {courses
                                                     .filter(course => !selectedUser?.enrollments?.some(e => e.course_id === course.id))
                                                     .map(course => (
                                                         <option key={course.id} value={course.id}>{course.title}</option>
                                                     ))}
                                                 {courses.filter(course => !selectedUser?.enrollments?.some(e => e.course_id === course.id)).length === 0 && (
-                                                    <option value="" disabled>El usuario ya está inscrito en todos los cursos</option>
+                                                    <option value="" disabled>El usuario ya está inscrito en todas las especialidades</option>
                                                 )}
                                             </select>
                                             <svg style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#94a3b8' }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
@@ -698,7 +783,7 @@ function AdminUsers() {
                                             onMouseEnter={(e) => { if (!enrolling) e.currentTarget.style.transform = 'translateY(-2px)' }}
                                             onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)' }}
                                         >
-                                            {enrolling ? 'Inscribiendo...' : 'Inscribir al curso'}
+                                            {enrolling ? 'Inscribiendo...' : 'Inscribir a la especialidad'}
                                         </button>
                                     </div>
                                 </form>
@@ -716,7 +801,7 @@ function AdminUsers() {
                                     <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
                                     </div>
-                                    <h3 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1e293b' }}>Materiales</h3>
+                                    <h3 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1e293b' }}>Certificados y Materiales</h3>
                                 </div>
                                 <button onClick={() => setShowMaterialModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}>
                                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -724,14 +809,21 @@ function AdminUsers() {
                             </div>
 
                             <p style={{ marginBottom: '1.5rem', color: '#64748b', fontSize: '1rem', fontWeight: '500' }}>
-                                Asignando a <strong style={{ color: '#1e293b' }}>{selectedUser?.full_name}</strong>
+                                Asignando al usuario <strong style={{ color: '#1e293b' }}>{selectedUser?.full_name}</strong>
                             </p>
 
                             <form onSubmit={handleAssignMaterial} style={{ marginBottom: '2rem', padding: '1.5rem', backgroundColor: '#f8fafc', borderRadius: '20px', border: '1px solid #f1f5f9' }}>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem', marginBottom: '1rem' }}>
                                     <div>
-                                        <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', fontWeight: '600', color: '#64748b' }}>Título del material</label>
+                                        <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', fontWeight: '600', color: '#64748b' }}>Título del Material</label>
                                         <input type="text" value={newMaterial.title} onChange={e => setNewMaterial({ ...newMaterial, title: e.target.value })} required placeholder="Ej. Presentación Módulo 1" style={{ width: '100%', padding: '0.7rem 1rem', borderRadius: '12px', border: '1.5px solid #e2e8f0', outline: 'none' }} />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', fontWeight: '600', color: '#64748b' }}>Tipo de Material</label>
+                                        <select value={newMaterial.category} onChange={e => setNewMaterial({ ...newMaterial, category: e.target.value })} style={{ width: '100%', padding: '0.7rem 1rem', borderRadius: '12px', border: '1.5px solid #e2e8f0', outline: 'none', backgroundColor: 'white', cursor: 'pointer' }}>
+                                            <option value="Materiales extras">Material Extra</option>
+                                            <option value="Certificaciones">Certificación</option>
+                                        </select>
                                     </div>
                                     <div>
                                         <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', fontWeight: '600', color: '#64748b' }}>Enlace del documento (Drive)</label>
@@ -739,7 +831,7 @@ function AdminUsers() {
                                     </div>
                                 </div>
                                 <button type="submit" disabled={assigningMaterial} style={{ width: '100%', padding: '0.8rem', borderRadius: '12px', border: 'none', background: '#3b82f6', color: 'white', fontWeight: '600', cursor: assigningMaterial ? 'not-allowed' : 'pointer' }}>
-                                    {assigningMaterial ? 'Asignando...' : '+ Asignar Material'}
+                                    {assigningMaterial ? 'Asignando...' : '+ Asignar'}
                                 </button>
                             </form>
 
@@ -755,7 +847,9 @@ function AdminUsers() {
                                             <div key={mat.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '12px' }}>
                                                 <div>
                                                     <p style={{ margin: 0, fontWeight: '600', color: '#1e293b', fontSize: '0.95rem' }}>{mat.title}</p>
-                                                    <p style={{ margin: 0, color: '#64748b', fontSize: '0.8rem', marginTop: '0.2rem' }}>Enlace a Drive</p>
+                                                    <p style={{ margin: 0, color: '#64748b', fontSize: '0.8rem', marginTop: '0.2rem' }}>
+                                                        {mat.category === 'Certificaciones' ? 'Certificación' : 'Enlace a Drive'}
+                                                    </p>
                                                 </div>
                                                 <button onClick={() => handleDeleteMaterial(mat.id)} style={{ padding: '0.5rem', borderRadius: '8px', border: 'none', backgroundColor: '#fee2e2', color: '#ef4444', cursor: 'pointer' }}>
                                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>

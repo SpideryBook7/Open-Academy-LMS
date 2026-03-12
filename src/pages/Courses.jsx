@@ -11,7 +11,7 @@ const Courses = () => {
     const [avatarUrl, setAvatarUrl] = useState('')
     const [userRole, setUserRole] = useState(null)
     const [searchQuery, setSearchQuery] = useState('')
-    const [filter, setFilter] = useState('Activo') // Activo, Completado
+    const [filter, setFilter] = useState('Todos') // Todos, Activa, Completada
     const [showFilterDropdown, setShowFilterDropdown] = useState(false)
     const [dominantColor, setDominantColor] = useState('rgba(0, 71, 186, 0.1)') // Default brand color
 
@@ -105,6 +105,11 @@ const Courses = () => {
 
                     if (coursesError) console.error("Error fetching course details:", coursesError)
 
+                    const { data: lessonsData } = await supabase
+                        .from('lessons')
+                        .select('id, course_id')
+                        .in('course_id', courseIds)
+
                     const coursesMap = (coursesData || []).reduce((acc, course) => {
                         acc[course.id] = course;
                         return acc;
@@ -115,13 +120,49 @@ const Courses = () => {
                         const course = coursesMap[enrollment.course_id];
                         if (!course) return null;
 
+                        let progress = 0;
+                        const courseLessons = (lessonsData || []).filter(l => l.course_id === course.id);
+                        const totalLessons = courseLessons.length;
+                        
+                        if (totalLessons > 0) {
+                            // Sincronización de progreso por inscripción (reinicio al re-inscribir)
+                            const storedEnrollmentId = localStorage.getItem(`lms_enrollment_id_${course.id}`);
+                            if (storedEnrollmentId && storedEnrollmentId !== String(enrollment.id)) {
+                                localStorage.removeItem(`lms_completed_${course.id}`);
+                                localStorage.removeItem(`lms_last_active_lesson_${course.id}`);
+                            }
+                            localStorage.setItem(`lms_enrollment_id_${course.id}`, String(enrollment.id));
+
+                            const completedText = localStorage.getItem(`lms_completed_${course.id}`) || '[]';
+                            try {
+                                const completed = JSON.parse(completedText);
+                                const courseLessonIds = new Set(courseLessons.map(l => String(l.id)));
+                                const actualCompletedCount = completed.filter(id => courseLessonIds.has(String(id))).length;
+                                progress = Math.min(100, Math.round((actualCompletedCount / totalLessons) * 100));
+
+                                // Sincronizar con la base de datos si llegó al 100% y no estaba marcada
+                                if (progress === 100 && !enrollment.completed) {
+                                    supabase
+                                        .from('enrollments')
+                                        .update({ completed: true })
+                                        .eq('id', enrollment.id)
+                                        .then(({error}) => {
+                                            if (error) console.error("Error auto-completing specialty:", error);
+                                        });
+                                }
+                            } catch (error) {
+                                console.error('Error parsing progress:', error);
+                                progress = 0;
+                            }
+                        }
+
                         return {
                             id: course.id,
                             title: course.title,
                             description: course.description,
                             image: course.thumbnail_url || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
-                            progress: enrollment.completed ? 100 : Math.floor(Math.random() * 80) + 10,
-                            status: enrollment.completed ? 'Completado' : 'Activo'
+                            progress: progress,
+                            status: progress === 100 ? 'Completada' : 'Activa'
                         }
                     }).filter(Boolean)
 
@@ -141,6 +182,40 @@ const Courses = () => {
         fetchCourses()
     }, [navigate])
 
+    const handleResetProgress = async (courseId) => {
+        if (!confirm('¿Estás seguro de que deseas reiniciar tu progreso en esta especialidad? Esto borrará tus lecciones completadas.')) return;
+        
+        // 1. Clear LocalStorage
+        localStorage.removeItem(`lms_completed_${courseId}`);
+        localStorage.removeItem(`lms_completion_shown_${courseId}`);
+        localStorage.removeItem(`lms_last_active_lesson_${courseId}`);
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith(`lms_score_${courseId}_`)) {
+                keysToRemove.push(key);
+            }
+        }
+        keysToRemove.forEach(k => localStorage.removeItem(k));
+        
+        // 2. Update Database enrollment completed flag
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user) {
+                await supabase
+                    .from('enrollments')
+                    .update({ completed: false })
+                    .eq('course_id', courseId)
+                    .eq('user_id', session.user.id);
+            }
+            // Reload page to reflect changes properly
+            window.location.reload();
+        } catch (error) {
+            console.error("Error resetting progress:", error);
+            alert("Error al reiniciar el progreso.");
+        }
+    };
+
     const filteredCourses = courses.filter(course => {
         const matchesSearch = course.title.toLowerCase().includes(searchQuery.toLowerCase())
         const matchesFilter = filter === 'Todos' || course.status === filter
@@ -148,7 +223,7 @@ const Courses = () => {
     })
 
     if (loading) {
-        return <div style={{ backgroundColor: 'var(--background-color)', color: '#ffffff', display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><p style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>Cargando cursos...</p></div>
+        return <div style={{ backgroundColor: 'var(--background-color)', color: '#ffffff', display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><p style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>Cargando especialidades...</p></div>
     }
 
     return (
@@ -171,7 +246,7 @@ const Courses = () => {
                 }}>
                     <div>
                         <h1 style={{ fontSize: '2.5rem', fontWeight: '800', color: '#ffffff', marginBottom: '0.25rem', letterSpacing: '-0.5px' }}>
-                            Mis <span style={{ color: 'var(--accent-gold)' }}>Cursos</span>
+                            Mis <span style={{ color: 'var(--accent-gold)' }}>Especialidades</span>
                         </h1>
                         <p style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '1.1rem', fontWeight: '500' }}>Continúa tu camino hacia el éxito académico.</p>
                     </div>
@@ -248,7 +323,8 @@ const Courses = () => {
                     <div style={{ position: 'relative', flex: 1, maxWidth: '500px' }}>
                         <input
                             type="text"
-                            placeholder="Buscar en tus cursos..."
+                            className="search-input"
+                            placeholder="Buscar especialidad..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             style={{
@@ -257,7 +333,7 @@ const Courses = () => {
                                 borderRadius: '16px',
                                 border: '1px solid rgba(255, 255, 255, 0.2)',
                                 backgroundColor: 'rgba(255, 255, 255, 0.12)',
-                                color: 'black',
+                                color: 'white',
                                 fontSize: '1rem',
                                 outline: 'none',
                                 transition: 'all 0.3s ease',
@@ -276,7 +352,7 @@ const Courses = () => {
                         />
                         <svg
                             width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-                            style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--accent-gold)', opacity: 0.8 }}
+                            style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'white', opacity: 0.8 }}
                         >
                             <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                         </svg>
@@ -295,7 +371,7 @@ const Courses = () => {
                                 backdropFilter: 'blur(10px)',
                                 border: '1px solid rgba(255, 255, 255, 0.3)',
                                 borderRadius: '16px',
-                                color: 'black',
+                                color: 'white',
                                 fontSize: '1rem',
                                 fontWeight: '700',
                                 cursor: 'pointer',
@@ -315,16 +391,17 @@ const Courses = () => {
                                 position: 'absolute',
                                 top: 'calc(100% + 12px)',
                                 right: 0,
-                                backgroundColor: 'rgba(255, 255, 255, 0.98)',
+                                backgroundColor: 'rgba(0, 0, 0, 0.85)',
                                 backdropFilter: 'blur(25px)',
                                 borderRadius: '20px',
                                 boxShadow: '0 25px 50px rgba(0, 0, 0, 0.3)',
                                 zIndex: 100,
                                 minWidth: '200px',
                                 padding: '0.6rem',
-                                animation: 'fadeInUp 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                                animation: 'fadeInUp 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                border: '1px solid rgba(255,255,255,0.1)'
                             }}>
-                                {['Activo', 'Completado'].map((opt) => (
+                                {['Todos', 'Activa', 'Completada'].map((opt) => (
                                     <div
                                         key={opt}
                                         onClick={() => { setFilter(opt); setShowFilterDropdown(false); }}
@@ -332,8 +409,8 @@ const Courses = () => {
                                             padding: '0.9rem 1.25rem',
                                             cursor: 'pointer',
                                             fontSize: '0.9rem',
-                                            color: filter === opt ? 'var(--accent-color)' : '#1e293b',
-                                            backgroundColor: filter === opt ? '#797979ff' : 'transparent',
+                                            color: filter === opt ? 'var(--accent-color)' : 'white',
+                                            backgroundColor: filter === opt ? 'rgba(255,255,255,0.1)' : 'transparent',
                                             borderRadius: '14px',
                                             transition: 'all 0.2s ease',
                                             fontWeight: filter === opt ? '800' : '600',
@@ -356,6 +433,9 @@ const Courses = () => {
                 </div>
 
                 <style>{`
+                    .search-input::placeholder {
+                        color: rgba(255, 255, 255, 0.6);
+                    }
                     @keyframes fadeInDown {
                         from { opacity: 0; transform: translateY(-30px); }
                         to { opacity: 1; transform: translateY(0); }
@@ -439,60 +519,89 @@ const Courses = () => {
                                             {course.title}
                                         </h3>
 
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '600' }}>Progreso del curso</span>
-                                                <span style={{ fontSize: '0.85rem', color: 'var(--accent-color)', fontWeight: '800' }}>{course.progress}%</span>
+                                        <div style={{ marginBottom: '0', position: 'relative', zIndex: 1 }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
+                                                <span style={{ fontSize: '0.8rem', color: course.progress === 100 ? '#3bc029ff' : '#64748b', fontWeight: '700' }}>
+                                                    {course.progress === 100 ? 'Especialidad Completada' : 'Progreso'}
+                                                </span>
+                                                <span style={{ fontSize: '0.8rem', color: course.progress === 100 ? '#3bc029ff' : 'var(--accent-color)', fontWeight: '800' }}>{course.progress}%</span>
                                             </div>
-                                            <div style={{ width: '100%', height: '8px', backgroundColor: '#f1f5f9', borderRadius: '10px', overflow: 'hidden', border: '1px solid rgba(0,0,0,0.02)' }}>
-                                                <div style={{
-                                                    width: `${course.progress}%`,
-                                                    height: '100%',
-                                                    background: 'linear-gradient(90deg, #0047ba, #00d2ff)',
-                                                    borderRadius: '10px',
-                                                    transition: 'width 1.5s cubic-bezier(0.4, 0, 0.2, 1)',
-                                                    boxShadow: '0 0 10px rgba(0, 71, 186, 0.2)'
+                                            <div style={{ width: '100%', height: '8px', backgroundColor: '#f1f5f9', borderRadius: '10px', overflow: 'hidden' }}>
+                                                <div style={{ 
+                                                    width: `${course.progress}%`, 
+                                                    height: '100%', 
+                                                    background: course.progress === 100 ? '#22e710ff' : 'linear-gradient(90deg, var(--accent-color), var(--primary-light, #00d2ff))', 
+                                                    borderRadius: '10px', 
+                                                    transition: 'width 1s ease-in-out' 
                                                 }}></div>
                                             </div>
                                         </div>
 
-                                        <button
-                                            style={{
-                                                marginTop: '1.75rem',
-                                                width: '100%',
-                                                padding: '1.1rem',
-                                                backgroundColor: '#0047ba',
-                                                color: 'white',
-                                                border: 'none',
-                                                borderRadius: '18px',
-                                                fontWeight: '800',
-                                                fontSize: '1rem',
-                                                cursor: 'pointer',
-                                                transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                                                boxShadow: '0 6px 15px rgba(0, 71, 186, 0.2)',
-                                                letterSpacing: '0.5px'
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                e.currentTarget.style.backgroundColor = '#00338d';
-                                                e.currentTarget.style.transform = 'translateY(-3px)';
-                                                e.currentTarget.style.boxShadow = '0 12px 25px rgba(0, 71, 186, 0.4)';
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                e.currentTarget.style.backgroundColor = '#0047ba';
-                                                e.currentTarget.style.transform = 'translateY(0)';
-                                                e.currentTarget.style.boxShadow = '0 6px 15px rgba(0, 71, 186, 0.2)';
-                                            }}
-                                        >
-                                            Continuar Aprendiendo
-                                        </button>
+                                        <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.75rem', width: '100%', alignItems: 'stretch' }}>
+                                            {course.progress === 100 && (
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleResetProgress(course.id);
+                                                    }}
+                                                    style={{
+                                                        width: '58px',
+                                                        backgroundColor: '#f59e0b',
+                                                        color: 'white',
+                                                        border: 'none',
+                                                        borderRadius: '18px',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        cursor: 'pointer',
+                                                        transition: 'all 0.3s ease',
+                                                        boxShadow: '0 4px 12px rgba(245, 158, 11, 0.2)',
+                                                        flexShrink: 0
+                                                    }}
+                                                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#d97706'; e.currentTarget.style.transform = 'scale(1.05)'; }}
+                                                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#f59e0b'; e.currentTarget.style.transform = 'scale(1)'; }}
+                                                    title="Reiniciar Especialidad"
+                                                >
+                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 4v6h6"></path><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+                                                </button>
+                                            )}
+                                            <button
+                                                style={{
+                                                    flex: 1,
+                                                    padding: '1.1rem',
+                                                    backgroundColor: '#0047ba',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: '18px',
+                                                    fontWeight: '700',
+                                                    fontSize: '1rem',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                    boxShadow: '0 6px 15px rgba(0, 71, 186, 0.2)',
+                                                    letterSpacing: '0.5px'
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    e.currentTarget.style.backgroundColor = '#00338d';
+                                                    e.currentTarget.style.transform = 'translateY(-3px)';
+                                                    e.currentTarget.style.boxShadow = '0 12px 25px rgba(0, 71, 186, 0.4)';
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.backgroundColor = '#0047ba';
+                                                    e.currentTarget.style.transform = 'translateY(0)';
+                                                    e.currentTarget.style.boxShadow = '0 6px 15px rgba(0, 71, 186, 0.2)';
+                                                }}
+                                            >
+                                                Continuar
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             ))
                         ) : (
                             <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '6rem 2rem', backgroundColor: 'rgba(255, 255, 255, 0.05)', borderRadius: '32px', border: '2px dashed rgba(255, 255, 255, 0.2)' }}>
                                 <div style={{ fontSize: '4rem', marginBottom: '1.5rem', opacity: 0.5 }}>📚</div>
-                                <h3 style={{ fontSize: '1.5rem', fontWeight: '700', color: 'white', marginBottom: '1rem' }}>No se encontraron cursos</h3>
-                                <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '1.1rem', maxWidth: '500px', margin: '0 auto' }}>No hemos podido encontrar cursos que coincidan con tu búsqueda o filtros actuales.</p>
+                                <h3 style={{ fontSize: '1.5rem', fontWeight: '700', color: 'white', marginBottom: '1rem' }}>No se encontraron especialidades</h3>
+                                <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '1.1rem', maxWidth: '500px', margin: '0 auto' }}>No hemos podido encontrar especialidades que coincidan con tu búsqueda o filtros actuales.</p>
                             </div>
                         )}
                     </div>

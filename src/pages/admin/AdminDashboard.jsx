@@ -156,7 +156,7 @@ const AdminDashboard = () => {
                                 <div style={{ padding: '0.8rem', backgroundColor: '#f0fdf4', borderRadius: '18px', color: '#22c55e' }}>
                                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
                                 </div>
-                                <span style={{ fontSize: '1.2rem', fontWeight: '700', color: '#1e293b' }}>Cursos totales</span>
+                                <span style={{ fontSize: '1.2rem', fontWeight: '700', color: '#1e293b' }}>Especialidades totales</span>
                             </div>
                             <p style={{ fontSize: '3rem', fontWeight: '700', color: '#0f172a', margin: 0, letterSpacing: '-1px' }}>{stats.courses}</p>
                         </div>
@@ -184,7 +184,7 @@ const AdminDashboard = () => {
                                 <div style={{ padding: '0.8rem', backgroundColor: '#fff7ed', borderRadius: '18px', color: '#f97316' }}>
                                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
                                 </div>
-                                <span style={{ fontSize: '1.2rem', fontWeight: '700', color: '#1e293b' }}>Cursos activos</span>
+                                <span style={{ fontSize: '1.2rem', fontWeight: '700', color: '#1e293b' }}>Especialidades activas</span>
                             </div>
                             <p style={{ fontSize: '3rem', fontWeight: '700', color: '#0f172a', margin: 0, letterSpacing: '-1px' }}>{stats.enrollments}</p>
                         </div>
@@ -251,7 +251,7 @@ const AdminDashboard = () => {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                                 {[
                                     { label: 'Agregar Usuario', action: () => navigate('/admin/users', { state: { openCreateModal: true } }), icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" strokeWidth="0"></g><g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M20 18L17 18M17 18L14 18M17 18V15M17 18V21M11 21H4C4 17.134 7.13401 14 11 14C11.695 14 12.3663 14.1013 13 14.2899M15 7C15 9.20914 13.2091 11 11 11C8.79086 11 7 9.20914 7 7C7 4.79086 8.79086 3 11 3C13.2091 3 15 4.79086 15 7Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path> </g></svg> },
-                                    { label: 'Agregar Curso', action: () => navigate('/admin/courses', { state: { openCreateModal: true } }), icon: <svg width="22" height="22" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none"><g id="SVGRepo_bgCarrier" strokeWidth="0"></g><g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g><g id="SVGRepo_iconCarrier"><path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h6M8 3v9l3-3 3 3V3M8 3h6m0 0h4a2 2 0 0 1 2 2v7m-1 4v3m0 3v-3m0 0h3m-3 0h-3"></path></g></svg> },
+                                    { label: 'Agregar Especialidad', action: () => navigate('/admin/courses', { state: { openCreateModal: true } }), icon: <svg width="22" height="22" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none"><g id="SVGRepo_bgCarrier" strokeWidth="0"></g><g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g><g id="SVGRepo_iconCarrier"><path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h6M8 3v9l3-3 3 3V3M8 3h6m0 0h4a2 2 0 0 1 2 2v7m-1 4v3m0 3v-3m0 0h3m-3 0h-3"></path></g></svg> },
                                     { label: 'Agregar Clase', action: () => handleQuickContent('video'), icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14v-4zM3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg> },
                                     { label: 'Agregar Material', action: () => handleQuickContent('link'), icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" strokeWidth="0"></g><g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M20 10.5V6.8C20 5.11984 20 4.27976 19.673 3.63803C19.3854 3.07354 18.9265 2.6146 18.362 2.32698C17.7202 2 16.8802 2 15.2 2H8.8C7.11984 2 6.27976 2 5.63803 2.32698C5.07354 2.6146 4.6146 3.07354 4.32698 3.63803C4 4.27976 4 5.11984 4 6.8V17.2C4 18.8802 4 19.7202 4.32698 20.362C4.6146 20.9265 5.07354 21.3854 5.63803 21.673C6.27976 22 7.11984 22 8.8 22H12M14 11H8M10 15H8M16 7H8M18 21V15M15 18H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path> </g></svg> },
                                     { label: 'Agregar Examen', action: () => handleQuickContent('quiz'), icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 11l3 3L22 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg> },
@@ -305,14 +305,14 @@ const AdminDashboard = () => {
                             <div style={{ position: 'relative', zIndex: 1 }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                                     <h3 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1e293b' }}>
-                                        Selecciona un <span style={{ color: '#3b82f6' }}>Curso</span>
+                                        Selecciona una <span style={{ color: '#3b82f6' }}>Especialidad</span>
                                     </h3>
                                     <button onClick={() => setShowCourseSelector(false)} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }} onMouseEnter={e => e.currentTarget.style.backgroundColor = '#f1f5f9'}>
                                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                                     </button>
                                 </div>
 
-                                <p style={{ color: '#64748b', marginBottom: '1.5rem', fontWeight: '500' }}>Para agregar un {targetFormat === 'video' ? 'clase' : targetFormat === 'link' ? 'material' : 'examen'}, primero elige el curso destino:</p>
+                                <p style={{ color: '#64748b', marginBottom: '1.5rem', fontWeight: '500' }}>Para agregar un {targetFormat === 'video' ? 'clase' : targetFormat === 'link' ? 'material' : 'examen'}, primero elige la especialidad destino:</p>
 
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '400px', overflowY: 'auto', paddingRight: '0.5rem', scrollbarWidth: 'thin' }}>
                                     {courses.length > 0 ? courses.map(course => (
@@ -337,7 +337,7 @@ const AdminDashboard = () => {
                                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
                                         </button>
                                     )) : (
-                                        <p style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8', fontStyle: 'italic' }}>No hay cursos disponibles actualmente.</p>
+                                        <p style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8', fontStyle: 'italic' }}>No hay especialidades disponibles actualmente.</p>
                                     )}
                                 </div>
                             </div>
@@ -385,9 +385,9 @@ const AdminDashboard = () => {
 
                         <div style={{ display: 'flex', gap: '1rem' }}>
                             {[
-                                { color: '#1877F2', icon: <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" /> },
+                                { link: '#', /* ENLACE A FACEBOOK AQUI (ej: "https://www.facebook.com/tu-pagina") */ color: '#1877F2', icon: <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" /> },
                                 {
-                                    color: '#E4405F', icon: (
+                                    link: '#', /* ENLACE A INSTAGRAM AQUI (ej: "https://www.instagram.com/tu-perfil") */ color: '#E4405F', icon: (
                                         <>
                                             <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
                                             <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
@@ -395,10 +395,13 @@ const AdminDashboard = () => {
                                         </>
                                     )
                                 },
-                                { color: '#25D366', icon: <path d="M3 21l1.65 -3.8a9 9 0 1 1 3.4 2.9l-5.05 .9 M9 10a.5 .5 0 0 0 1 0v-1a.5 .5 0 0 0 -1 0v1a5 5 0 0 0 5 5h1a.5 .5 0 0 0 0 -1h-1a.5 .5 0 0 0 0 1" /> }
+                                { link: '#', /* ENLACE A WHATSAPP WEB AQUI (ej: "https://wa.me/numerodetelefono") */ color: '#25D366', icon: <path d="M3 21l1.65 -3.8a9 9 0 1 1 3.4 2.9l-5.05 .9 M9 10a.5 .5 0 0 0 1 0v-1a.5 .5 0 0 0 -1 0v1a5 5 0 0 0 5 5h1a.5 .5 0 0 0 0 -1h-1a.5 .5 0 0 0 0 1" /> }
                             ].map((social, i) => (
-                                <div
+                                <a
                                     key={i}
+                                    href={social.link}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
                                     style={{
                                         width: '38px',
                                         height: '38px',
@@ -409,7 +412,8 @@ const AdminDashboard = () => {
                                         justifyContent: 'center',
                                         cursor: 'pointer',
                                         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                        border: '1px solid rgba(255, 255, 255, 0.2)'
+                                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                                        textDecoration: 'none'
                                     }}
                                     onMouseEnter={(e) => {
                                         e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.06)';
@@ -427,7 +431,7 @@ const AdminDashboard = () => {
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'stroke 0.3s ease' }}>
                                         {social.icon}
                                     </svg>
-                                </div>
+                                </a>
                             ))}
                         </div>
                     </div>

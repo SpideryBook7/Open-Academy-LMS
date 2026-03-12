@@ -113,10 +113,10 @@ const AdminCourses = () => {
     }
 
     const handleDeleteCourse = async (courseId) => {
-        if (!confirm('¿Estás seguro de que deseas eliminar este curso y todo su contenido (lecciones, inscripciones)?\n\nEsta acción no se puede deshacer.')) return
+        if (!confirm('¿Estás seguro de que deseas eliminar esta especialidad y todo su contenido (lecciones, inscripciones)?\n\nEsta acción no se puede deshacer.')) return
 
         try {
-            // Eliminar inscripciones asociadas para no dejar "Cursos desconocidos" en los usuarios
+            // Eliminar inscripciones asociadas para no dejar "Especialidades desconocidas" en los usuarios
             const { error: enrollmentsError } = await supabase
                 .from('enrollments')
                 .delete()
@@ -124,7 +124,7 @@ const AdminCourses = () => {
 
             if (enrollmentsError) console.error("Error deleting enrollments:", enrollmentsError);
 
-            // Eliminar lecciones del curso
+            // Eliminar lecciones de la especialidad
             const { error: lessonsError } = await supabase
                 .from('lessons')
                 .delete()
@@ -132,7 +132,7 @@ const AdminCourses = () => {
 
             if (lessonsError) console.error("Error deleting lessons:", lessonsError);
 
-            // Finalmente, eliminar el curso
+            // Finalmente, eliminar la especialidad
             const { error } = await supabase
                 .from('courses')
                 .delete()
@@ -142,7 +142,7 @@ const AdminCourses = () => {
 
             setCourses(courses.filter(c => c.id !== courseId))
         } catch (error) {
-            alert('Error al eliminar el curso: ' + error.message)
+            alert('Error al eliminar la especialidad: ' + error.message)
         }
     }
 
@@ -160,8 +160,8 @@ const AdminCourses = () => {
             if (error) throw error
             setLessons(data || [])
         } catch (error) {
-            console.error('Error al cargar el contenido del curso:', error)
-            alert('Error al cargar el contenido del curso.')
+            console.error('Error al cargar el contenido de la especialidad:', error)
+            alert('Error al cargar el contenido de la especialidad.')
         } finally {
             setLoadingLessons(false)
         }
@@ -293,7 +293,7 @@ const AdminCourses = () => {
                     <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3.5rem', animation: 'fadeInDown 0.8s ease-out' }}>
                         <div>
                             <h1 style={{ fontSize: '2.5rem', fontWeight: '800', color: '#ffffff', marginBottom: '0.25rem', letterSpacing: '-0.5px' }}>
-                                Gestión de <span style={{ color: 'var(--accent-gold)', textShadow: '0 0 20px rgba(207, 170, 3, 0.92)' }}>Cursos</span>
+                                Gestión de <span style={{ color: 'var(--accent-gold)', textShadow: '0 0 20px rgba(207, 170, 3, 0.92)' }}>Especialidades</span>
                             </h1>
                             <p style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '1.1rem', fontWeight: '500' }}>Crea y administra el catálogo educativo de la academia.</p>
                         </div>
@@ -302,7 +302,7 @@ const AdminCourses = () => {
                             <div style={{ position: 'relative' }}>
                                 <input
                                     type="text"
-                                    placeholder="Buscar cursos..."
+                                    placeholder="Buscar especialidades..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                     style={{
@@ -339,7 +339,7 @@ const AdminCourses = () => {
                                 onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 12px 25px rgba(0, 0, 0, 0.3)'; }}
                                 onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 20px rgba(0, 0, 0, 0.2)'; }}
                             >
-                                + Nuevo Curso
+                                + Nueva Especialidad
                             </button>
                         </div>
                     </header>
@@ -384,7 +384,7 @@ const AdminCourses = () => {
                                             onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
                                         />
                                         <div style={{ position: 'absolute', top: '1.25rem', right: '1.25rem', padding: '0.4rem 0.9rem', backgroundColor: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(10px)', borderRadius: '14px', fontSize: '0.75rem', fontWeight: '800', color: '#f97316', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', letterSpacing: '0.5px' }}>
-                                            CURSO
+                                            ESPECIALIDAD
                                         </div>
                                     </div>
                                     <div style={{ padding: '2rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
@@ -455,7 +455,7 @@ const AdminCourses = () => {
                                 }}>
                                     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="12"></line><line x1="11" y1="14" x2="11.01" y2="14"></line></svg>
                                 </div>
-                                <h3 style={{ color: 'white', fontSize: '1.8rem', fontWeight: '800', marginBottom: '0.75rem', letterSpacing: '-0.5px' }}>No se encontraron cursos</h3>
+                                <h3 style={{ color: 'white', fontSize: '1.8rem', fontWeight: '800', marginBottom: '0.75rem', letterSpacing: '-0.5px' }}>No se encontraron especialidades</h3>
                                 <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '1.1rem', textAlign: 'center', maxWidth: '450px', lineHeight: '1.6' }}>
                                     No pudimos encontrar ningún resultado para "<span style={{ color: 'var(--accent-gold)', fontWeight: '700' }}>{searchTerm}</span>".
                                     <br />Intenta verificar la ortografía o usa términos más generales.
@@ -476,11 +476,11 @@ const AdminCourses = () => {
                                     <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: '#fff7ed', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
                                     </div>
-                                    <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1e293b' }}>Nuevo Curso</h2>
+                                    <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1e293b' }}>Nueva Especialidad</h2>
                                 </div>
                                 <form onSubmit={handleCreateCourse}>
                                     <div style={{ marginBottom: '1.25rem' }}>
-                                        <label style={{ display: 'block', marginBottom: '0.6rem', fontSize: '0.9rem', fontWeight: '600', color: '#64748b' }}>Título del curso</label>
+                                        <label style={{ display: 'block', marginBottom: '0.6rem', fontSize: '0.9rem', fontWeight: '600', color: '#64748b' }}>Título de la especialidad</label>
                                         <input
                                             type="text"
                                             value={newCourse.title}
@@ -493,13 +493,13 @@ const AdminCourses = () => {
                                         />
                                     </div>
                                     <div style={{ marginBottom: '1.25rem' }}>
-                                        <label style={{ display: 'block', marginBottom: '0.6rem', fontSize: '0.9rem', fontWeight: '600', color: '#64748b' }}>Descripción del curso</label>
+                                        <label style={{ display: 'block', marginBottom: '0.6rem', fontSize: '0.9rem', fontWeight: '600', color: '#64748b' }}>Descripción de la especialidad</label>
                                         <textarea
                                             value={newCourse.description}
                                             onChange={e => setNewCourse({ ...newCourse, description: e.target.value })}
                                             required
                                             rows="3"
-                                            placeholder="Psicología es el estudio científico de la mente y el comportamiento humano. Este curso hablará de..."
+                                            placeholder="Psicología es el estudio científico de la mente y el comportamiento humano. Esta especialidad hablará de..."
                                             style={{ width: '100%', padding: '0.8rem 1rem', borderRadius: '14px', border: '1.5px solid #f1f5f9', backgroundColor: '#f8fafc', fontSize: '0.95rem', color: '#334155', resize: 'none', transition: 'all 0.2s ease', outline: 'none' }}
                                             onFocus={(e) => { e.target.style.borderColor = '#f97316'; e.target.style.backgroundColor = 'white'; e.target.style.boxShadow = '0 0 0 4px rgba(249, 115, 22, 0.1)'; }}
                                             onBlur={(e) => { e.target.style.borderColor = '#f1f5f9'; e.target.style.backgroundColor = '#f8fafc'; e.target.style.boxShadow = 'none'; }}
@@ -532,12 +532,12 @@ const AdminCourses = () => {
                                         </div>
                                     </div>
                                     <div style={{ marginBottom: '2rem' }}>
-                                        <label style={{ display: 'block', marginBottom: '0.6rem', fontSize: '0.9rem', fontWeight: '600', color: '#64748b' }}>Imagen del video (URL)</label>
+                                        <label style={{ display: 'block', marginBottom: '0.6rem', fontSize: '0.9rem', fontWeight: '600', color: '#64748b' }}>Imagen de la especialidad (URL)</label>
                                         <input
                                             type="text"
                                             value={newCourse.thumbnail_url}
                                             onChange={e => setNewCourse({ ...newCourse, thumbnail_url: e.target.value })}
-                                            placeholder="https://images..."
+                                            placeholder="https://..."
                                             style={{ width: '100%', padding: '0.8rem 1rem', borderRadius: '14px', border: '1.5px solid #f1f5f9', backgroundColor: '#f8fafc', fontSize: '0.95rem', color: '#334155', outline: 'none' }}
                                             onFocus={(e) => { e.target.style.borderColor = '#f97316'; e.target.style.backgroundColor = 'white'; }}
                                             onBlur={(e) => { e.target.style.borderColor = '#f1f5f9'; e.target.style.backgroundColor = '#f8fafc'; }}
@@ -559,7 +559,7 @@ const AdminCourses = () => {
                                             onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 12px 20px rgba(249, 115, 22, 0.3)'; }}
                                             onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 15px rgba(249, 115, 22, 0.2)'; }}
                                         >
-                                            Crear curso
+                                            Crear especialidad
                                         </button>
                                     </div>
                                 </form>
@@ -585,7 +585,7 @@ const AdminCourses = () => {
                                     </div>
                                     <div>
                                         <h2 style={{ fontSize: '1.75rem', fontWeight: '700', color: '#1e293b', lineHeight: 1.1, letterSpacing: '-0.5px' }}>Administrar Contenido</h2>
-                                        <p style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: '600', marginTop: '0.3rem' }}>Curso: <span style={{ color: '#3b82f6', fontWeight: '700' }}>{selectedCourse.title}</span></p>
+                                        <p style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: '600', marginTop: '0.3rem' }}>Especialidad: <span style={{ color: '#3b82f6', fontWeight: '700' }}>{selectedCourse.title}</span></p>
                                     </div>
                                 </div>
                                 <button
@@ -774,13 +774,13 @@ const AdminCourses = () => {
                                     </div>
                                 </div>
 
-                                {/* RIGHT PANEL: Contenido actual del curso */}
+                                {/* RIGHT PANEL: Contenido actual de la especialidad */}
                                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: '#fcfdfe', overflow: 'hidden' }}>
                                     <div style={{ padding: '2rem 2.5rem', overflowY: 'auto', flex: 1, scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 transparent' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2.5rem' }}>
                                             <h3 style={{ fontSize: '1.1rem', fontWeight: '700', color: '#1e293b', textTransform: 'uppercase', letterSpacing: '1px', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                                                 <div style={{ width: '12px', height: '12px', borderRadius: '4px', backgroundColor: '#3b82f6', boxShadow: '0 0 10px rgba(59, 130, 246, 0.3)' }}></div>
-                                                Contenido actual del curso
+                                                Contenido actual de la especialidad
                                             </h3>
                                             <span style={{ fontSize: '0.8rem', fontWeight: '700', color: '#3b82f6', backgroundColor: '#eff6ff', padding: '0.4rem 1rem', borderRadius: '12px', border: '1px solid #dbeafe' }}>{lessons.length} MÓDULOS ACTIVOS</span>
                                         </div>
@@ -796,7 +796,7 @@ const AdminCourses = () => {
                                                     <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#ff7300ff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
                                                 </div>
                                                 <p style={{ color: '#646b74ff', fontWeight: '700', fontSize: '1.1rem', marginBottom: '0.5rem' }}>Sin contenido registrado</p>
-                                                <p style={{ color: '#acb1b8ff', fontWeight: '600', fontSize: '0.9rem', maxWidth: '300px', margin: '0 auto' }}>Comienza a estructurar tu curso usando el panel de la izquierda.</p>
+                                                <p style={{ color: '#acb1b8ff', fontWeight: '600', fontSize: '0.9rem', maxWidth: '300px', margin: '0 auto' }}>Comienza a estructurar tu especialidad usando el panel de la izquierda.</p>
                                             </div>
                                         ) : (
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
