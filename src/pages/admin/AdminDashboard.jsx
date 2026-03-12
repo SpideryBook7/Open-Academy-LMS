@@ -184,7 +184,7 @@ const AdminDashboard = () => {
                                 <div style={{ padding: '0.8rem', backgroundColor: '#fff7ed', borderRadius: '18px', color: '#f97316' }}>
                                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
                                 </div>
-                                <span style={{ fontSize: '1.2rem', fontWeight: '700', color: '#1e293b' }}>Especialidades activas</span>
+                                <span style={{ fontSize: '1.2rem', fontWeight: '700', color: '#1e293b' }}>Alumnos inscritos</span>
                             </div>
                             <p style={{ fontSize: '3rem', fontWeight: '700', color: '#0f172a', margin: 0, letterSpacing: '-1px' }}>{stats.enrollments}</p>
                         </div>

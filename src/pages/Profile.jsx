@@ -335,9 +335,10 @@ const Profile = () => {
 
                                     <div style={{ display: 'flex', gap: '1rem' }}>
                                         <div style={{ flex: 1 }}>
-                                            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', color: '#64748b', marginBottom: '0.6rem', marginLeft: '0.5rem' }}>URL del Avatar</label>
+                                            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', color: '#64748b', marginBottom: '0.6rem', marginLeft: '0.5rem' }}>Foto de Perfil</label>
                                             <input
                                                 type="text"
+                                                placeholder='URL de Drive | Cargar imagen'
                                                 value={avatarUrl}
                                                 onChange={(e) => { setAvatarUrl(e.target.value); if (e.target.value.startsWith('http')) extractColor(e.target.value); }}
                                                 style={{
@@ -351,7 +352,7 @@ const Profile = () => {
                                                     fontWeight: '500'
                                                 }}
                                                 onFocus={(e) => { e.target.style.borderColor = 'var(--accent-color)'; e.target.style.backgroundColor = 'white'; }}
-                                                onBlur={(e) => { e.target.style.borderColor = '#f1f5f9'; e.target.style.backgroundColor = '#f8fafc'; }}
+                                                onBlur={(e) => { e.target.style.borderColor = '#f1f5f9'; e.target.style.backgroundColor = '#2b333bff'; }}
                                             />
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'flex-end' }}>
@@ -371,7 +372,7 @@ const Profile = () => {
                                                 onMouseEnter={(e) => { e.target.style.backgroundColor = '#0f172a'; e.target.style.transform = 'translateY(-2px)'; }}
                                                 onMouseLeave={(e) => { e.target.style.backgroundColor = '#1e293b'; e.target.style.transform = 'translateY(0)'; }}
                                             >
-                                                {uploading ? '...' : 'Subir'}
+                                                {uploading ? '...' : 'Cargar Imagen'}
                                                 <input type="file" accept="image/*" onChange={uploadAvatar} disabled={uploading} style={{ display: 'none' }} />
                                             </label>
                                         </div>
