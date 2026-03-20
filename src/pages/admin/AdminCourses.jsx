@@ -8,7 +8,9 @@ const AdminCourses = () => {
     // Course State
     const [courses, setCourses] = useState([])
     const [showCreateModal, setShowCreateModal] = useState(false)
+    const [showEditModal, setShowEditModal] = useState(false)
     const [newCourse, setNewCourse] = useState({ title: '', description: '', thumbnail_url: '', instructor_name: '', instructor_avatar: '' })
+    const [editingCourse, setEditingCourse] = useState(null)
 
     // Content/Lesson State
     const [showContentModal, setShowContentModal] = useState(false)
@@ -18,6 +20,73 @@ const AdminCourses = () => {
     const [newLesson, setNewLesson] = useState({ title: '', type: 'video', url: '', description: '' })
     const [quizQuestions, setQuizQuestions] = useState([{ question: '', options: ['', ''], correctAnswer: 0 }])
     const [searchTerm, setSearchTerm] = useState('')
+    const [draggedItemIndex, setDraggedItemIndex] = useState(null)
+
+    // Helper: Convert Google Drive Link to direct image link (using thumbnail endpoint for better reliability)
+    const convertDriveUrl = (url) => {
+        if (!url || (!url.includes('drive.google.com') && !url.includes('docs.google.com'))) return url;
+        const driveRegex = /(?:\/d\/|id=)([\w-]+)/;
+        const match = url.match(driveRegex);
+        if (match && match[1]) {
+            // Using thumbnail endpoint which is more robust for direct image embedding
+            return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1000`;
+        }
+        return url;
+    };
+
+    // Drag and Drop Handlers
+    const handleDragStart = (e, index) => {
+        setDraggedItemIndex(index);
+        e.dataTransfer.effectAllowed = "move";
+        // Opacidad visual durante el arrastre
+        e.currentTarget.style.opacity = '0.5';
+    };
+
+    const handleDragEnd = (e) => {
+        e.currentTarget.style.opacity = '1';
+        setDraggedItemIndex(null);
+    };
+
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+    };
+
+    const handleDrop = async (e, index) => {
+        e.preventDefault();
+        if (draggedItemIndex === null || draggedItemIndex === index) return;
+
+        const newLessons = [...lessons];
+        const draggedItem = newLessons[draggedItemIndex];
+        newLessons.splice(draggedItemIndex, 1);
+        newLessons.splice(index, 0, draggedItem);
+
+        // Actualizar estado local para feedback inmediato
+        setLessons(newLessons);
+
+        try {
+            // Preparar actualizaciones para la DB incluyendo campos obligatorios para evitar errores de NOT NULL
+            const updates = newLessons.map((lesson, idx) => ({
+                id: lesson.id,
+                course_id: lesson.course_id,
+                title: lesson.title,
+                video_url: lesson.video_url,
+                content_type: lesson.content_type,
+                order: idx + 1
+            }));
+
+            // Usamos upsert para actualizar el campo 'order' basándonos en el 'id'
+            const { error } = await supabase
+                .from('lessons')
+                .upsert(updates, { onConflict: 'id' });
+
+            if (error) throw error;
+        } catch (error) {
+            console.error('Error al actualizar el orden de las lecciones:', error);
+            alert('Error al guardar el nuevo orden: ' + error.message + '. Se restaurará la lista original.');
+            fetchLessons(selectedCourse.id); // Restaurar desde DB
+        }
+    };
 
     // Quiz Handlers
     const handleQuestionChange = (index, field, value) => {
@@ -86,6 +155,18 @@ const AdminCourses = () => {
     const handleCreateCourse = async (e) => {
         e.preventDefault()
         try {
+            // Validation: Only Google Drive allowed as requested
+            const isDrive = (url) => url.includes('drive.google.com') || url.includes('docs.google.com');
+            
+            if (!isDrive(newCourse.thumbnail_url)) {
+                alert('La plataforma solo acepta imágenes alojadas en Google Drive para la especialidad.')
+                return
+            }
+            if (newCourse.instructor_avatar && !isDrive(newCourse.instructor_avatar)) {
+                alert('La plataforma solo acepta imágenes alojadas en Google Drive para el instructor.')
+                return
+            }
+
             const { data: { session } } = await supabase.auth.getSession()
 
             const { data, error } = await supabase
@@ -94,10 +175,10 @@ const AdminCourses = () => {
                     {
                         title: newCourse.title,
                         description: newCourse.description,
-                        thumbnail_url: newCourse.thumbnail_url || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
+                        thumbnail_url: convertDriveUrl(newCourse.thumbnail_url),
                         instructor_id: session.user.id,
                         instructor_name: newCourse.instructor_name,
-                        instructor_avatar: newCourse.instructor_avatar
+                        instructor_avatar: convertDriveUrl(newCourse.instructor_avatar)
                     }
                 ])
                 .select()
@@ -109,6 +190,50 @@ const AdminCourses = () => {
             setNewCourse({ title: '', description: '', thumbnail_url: '', instructor_name: '', instructor_avatar: '' })
         } catch (error) {
             alert('Error al crear el curso: ' + error.message)
+        }
+    }
+
+    const handleUpdateCourse = async (e) => {
+        e.preventDefault()
+        try {
+            // Validation: Only Google Drive allowed
+            const isDrive = (url) => !url || url.includes('drive.google.com') || url.includes('docs.google.com') || url.includes('googleusercontent.com');
+            
+            if (!isDrive(editingCourse.thumbnail_url)) {
+                alert('La plataforma solo acepta imágenes alojadas en Google Drive para la especialidad.')
+                return
+            }
+            if (editingCourse.instructor_avatar && !isDrive(editingCourse.instructor_avatar)) {
+                alert('La plataforma solo acepta imágenes alojadas en Google Drive para el instructor.')
+                return
+            }
+
+            const { error } = await supabase
+                .from('courses')
+                .update({
+                    title: editingCourse.title,
+                    description: editingCourse.description,
+                    thumbnail_url: convertDriveUrl(editingCourse.thumbnail_url),
+                    instructor_name: editingCourse.instructor_name,
+                    instructor_avatar: convertDriveUrl(editingCourse.instructor_avatar)
+                })
+                .eq('id', editingCourse.id)
+
+            if (error) throw error
+
+            setCourses(courses.map(c => c.id === editingCourse.id ? 
+                { ...c, 
+                  title: editingCourse.title, 
+                  description: editingCourse.description, 
+                  thumbnail_url: convertDriveUrl(editingCourse.thumbnail_url),
+                  instructor_name: editingCourse.instructor_name,
+                  instructor_avatar: convertDriveUrl(editingCourse.instructor_avatar)
+                } : c))
+            setShowEditModal(false)
+            setEditingCourse(null)
+            alert('Especialidad actualizada exitosamente')
+        } catch (error) {
+            alert('Error al actualizar la especialidad: ' + error.message)
         }
     }
 
@@ -299,49 +424,49 @@ const AdminCourses = () => {
                         </div>
 
                         <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center' }}>
-                            <div style={{ position: 'relative' }}>
-                                <input
-                                    type="text"
+                                <div style={{ position: 'relative' }}>
+                                    <input
+                                        type="text"
                                     placeholder="Buscar especialidades..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        style={{
+                                            padding: '0.8rem 1.2rem 0.8rem 2.8rem',
+                                            borderRadius: '16px',
+                                            border: '1px solid rgba(255, 255, 255, 0.2)',
+                                            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                            color: '#ffffff',
+                                            width: '320px',
+                                            backdropFilter: 'blur(10px)',
+                                            fontSize: '0.95rem',
+                                            outline: 'none',
+                                            transition: 'all 0.3s'
+                                        }}
+                                        onFocus={(e) => { e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.15)'; e.target.style.borderColor = 'var(--accent-gold)'; }}
+                                        onBlur={(e) => { e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'; e.target.style.borderColor = 'rgba(255, 255, 255, 0.2)'; }}
+                                    />
+                                    <svg style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255, 255, 255, 0.5)' }} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                                </div>
+                                <button
+                                    onClick={() => setShowCreateModal(true)}
                                     style={{
-                                        padding: '0.8rem 1.2rem 0.8rem 2.8rem',
+                                        padding: '0.8rem 1.6rem',
+                                        backgroundColor: 'var(--accent-color, #3b82f6)',
+                                        color: 'white',
+                                        border: 'none',
                                         borderRadius: '16px',
-                                        border: '1px solid rgba(255, 255, 255, 0.2)',
-                                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                                        color: '#ffffff',
-                                        width: '320px',
-                                        backdropFilter: 'blur(10px)',
-                                        fontSize: '0.95rem',
-                                        outline: 'none',
-                                        transition: 'all 0.3s'
+                                        fontWeight: '700',
+                                        cursor: 'pointer',
+                                        boxShadow: '0 8px 20px rgba(0, 0, 0, 0.2)',
+                                        transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                                        whiteSpace: 'nowrap'
                                     }}
-                                    onFocus={(e) => { e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.15)'; e.target.style.borderColor = 'var(--accent-gold)'; }}
-                                    onBlur={(e) => { e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'; e.target.style.borderColor = 'rgba(255, 255, 255, 0.2)'; }}
-                                />
-                                <svg style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255, 255, 255, 0.5)' }} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                                    onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 12px 25px rgba(0, 0, 0, 0.3)'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 20px rgba(0, 0, 0, 0.2)'; }}
+                                >
+                                    + Nueva Especialidad
+                                </button>
                             </div>
-                            <button
-                                onClick={() => setShowCreateModal(true)}
-                                style={{
-                                    padding: '0.8rem 1.6rem',
-                                    backgroundColor: 'var(--accent-color, #3b82f6)',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '16px',
-                                    fontWeight: '700',
-                                    cursor: 'pointer',
-                                    boxShadow: '0 8px 20px rgba(0, 0, 0, 0.2)',
-                                    transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-                                    whiteSpace: 'nowrap'
-                                }}
-                                onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 12px 25px rgba(0, 0, 0, 0.3)'; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 20px rgba(0, 0, 0, 0.2)'; }}
-                            >
-                                + Nueva Especialidad
-                            </button>
-                        </div>
                     </header>
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '2rem', animation: 'fadeInUp 0.8s ease-out 0.2s both' }}>
@@ -379,7 +504,11 @@ const AdminCourses = () => {
                                     }}
                                 >
                                     <div style={{ height: '200px', backgroundColor: '#f1f5f9', position: 'relative', overflow: 'hidden' }}>
-                                        <img src={course.thumbnail_url} alt={course.title} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease' }}
+                                        <img 
+                                            src={convertDriveUrl(course.thumbnail_url)} 
+                                            alt={course.title} 
+                                            referrerPolicy="no-referrer"
+                                            style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease' }}
                                             onMouseEnter={(e) => e.target.style.transform = 'scale(1.05)'}
                                             onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
                                         />
@@ -395,8 +524,9 @@ const AdminCourses = () => {
 
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', marginBottom: '1.8rem', padding: '0.8rem', backgroundColor: 'rgba(248, 250, 252, 0.8)', borderRadius: '18px', border: '1px solid #f1f5f9' }}>
                                             <img
-                                                src={course.instructor_avatar || 'https://ui-avatars.com/api/?name=' + (course.instructor_name || 'A')}
+                                                src={convertDriveUrl(course.instructor_avatar) || 'https://ui-avatars.com/api/?name=' + (course.instructor_name || 'A')}
                                                 alt="Instructor"
+                                                referrerPolicy="no-referrer"
                                                 style={{ width: '36px', height: '36px', borderRadius: '50%', border: '2px solid white', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}
                                             />
                                             <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -416,10 +546,20 @@ const AdminCourses = () => {
                                                 Contenido
                                             </button>
                                             <button
+                                                onClick={() => { setEditingCourse(course); setShowEditModal(true); }}
+                                                style={{ padding: '0.9rem', backgroundColor: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '16px', color: '#64748b', fontWeight: '700', cursor: 'pointer', transition: 'all 0.3s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f1f5f9'; e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.transform = 'scale(1.05)'; }}
+                                                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#f8fafc'; e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.transform = 'scale(1)'; }}
+                                                title="Editar información"
+                                            >
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4L18.5 2.5z"></path></svg>
+                                            </button>
+                                            <button
                                                 onClick={() => handleDeleteCourse(course.id)}
                                                 style={{ padding: '0.9rem', backgroundColor: '#fef2f2', border: '1.5px solid #fee2e2', borderRadius: '16px', color: '#ef4444', fontWeight: '700', cursor: 'pointer', transition: 'all 0.3s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                                                 onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#fee2e2'; e.currentTarget.style.borderColor = '#fca5a5'; e.currentTarget.style.transform = 'scale(1.05)'; }}
                                                 onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#fef2f2'; e.currentTarget.style.borderColor = '#fee2e2'; e.currentTarget.style.transform = 'scale(1)'; }}
+                                                title="Eliminar especialidad"
                                             >
                                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
                                             </button>
@@ -507,12 +647,12 @@ const AdminCourses = () => {
                                     </div>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
                                         <div>
-                                            <label style={{ display: 'block', marginBottom: '0.6rem', fontSize: '0.9rem', fontWeight: '600', color: '#64748b' }}>Imagen del instructor (URL)</label>
+                                            <label style={{ display: 'block', marginBottom: '0.6rem', fontSize: '0.9rem', fontWeight: '600', color: '#64748b' }}>Imagen del instructor</label>
                                             <input
                                                 type="text"
                                                 value={newCourse.instructor_avatar}
                                                 onChange={e => setNewCourse({ ...newCourse, instructor_avatar: e.target.value })}
-                                                placeholder="https://..."
+                                                placeholder="Google Drive URL"
                                                 style={{ width: '100%', padding: '0.8rem 1rem', borderRadius: '14px', border: '1.5px solid #f1f5f9', backgroundColor: '#f8fafc', fontSize: '0.95rem', color: '#334155', outline: 'none' }}
                                                 onFocus={(e) => { e.target.style.borderColor = '#f97316'; e.target.style.backgroundColor = 'white'; }}
                                                 onBlur={(e) => { e.target.style.borderColor = '#f1f5f9'; e.target.style.backgroundColor = '#f8fafc'; }}
@@ -532,12 +672,12 @@ const AdminCourses = () => {
                                         </div>
                                     </div>
                                     <div style={{ marginBottom: '2rem' }}>
-                                        <label style={{ display: 'block', marginBottom: '0.6rem', fontSize: '0.9rem', fontWeight: '600', color: '#64748b' }}>Imagen de la especialidad (URL)</label>
+                                        <label style={{ display: 'block', marginBottom: '0.6rem', fontSize: '0.9rem', fontWeight: '600', color: '#64748b' }}>Imagen de la especialidad</label>
                                         <input
                                             type="text"
                                             value={newCourse.thumbnail_url}
                                             onChange={e => setNewCourse({ ...newCourse, thumbnail_url: e.target.value })}
-                                            placeholder="https://..."
+                                            placeholder="Google Drive URL"
                                             style={{ width: '100%', padding: '0.8rem 1rem', borderRadius: '14px', border: '1.5px solid #f1f5f9', backgroundColor: '#f8fafc', fontSize: '0.95rem', color: '#334155', outline: 'none' }}
                                             onFocus={(e) => { e.target.style.borderColor = '#f97316'; e.target.style.backgroundColor = 'white'; }}
                                             onBlur={(e) => { e.target.style.borderColor = '#f1f5f9'; e.target.style.backgroundColor = '#f8fafc'; }}
@@ -560,6 +700,91 @@ const AdminCourses = () => {
                                             onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 15px rgba(249, 115, 22, 0.2)'; }}
                                         >
                                             Crear especialidad
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Edit Course Modal */}
+                {showEditModal && editingCourse && (
+                    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(10px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100, animation: 'fadeIn 0.4s ease-out' }}>
+                        <div style={{ backgroundColor: 'white', padding: '2.5rem', borderRadius: '32px', width: '550px', maxWidth: '90%', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15)', border: '1px solid rgba(255, 255, 255, 0.8)', position: 'relative', overflow: 'hidden' }}>
+                            <div style={{ position: 'relative', zIndex: 1 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '2rem' }}>
+                                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4L18.5 2.5z"></path></svg>
+                                    </div>
+                                    <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1e293b' }}>Editar Especialidad</h2>
+                                </div>
+                                <form onSubmit={handleUpdateCourse}>
+                                    <div style={{ marginBottom: '1.25rem' }}>
+                                        <label style={{ display: 'block', marginBottom: '0.6rem', fontSize: '0.9rem', fontWeight: '600', color: '#64748b' }}>Título</label>
+                                        <input
+                                            type="text"
+                                            value={editingCourse.title}
+                                            onChange={e => setEditingCourse({ ...editingCourse, title: e.target.value })}
+                                            required
+                                            style={{ width: '100%', padding: '0.8rem 1rem', borderRadius: '14px', border: '1.5px solid #f1f5f9', backgroundColor: '#f8fafc', outline: 'none' }}
+                                        />
+                                    </div>
+                                    <div style={{ marginBottom: '1.25rem' }}>
+                                        <label style={{ display: 'block', marginBottom: '0.6rem', fontSize: '0.9rem', fontWeight: '600', color: '#64748b' }}>Descripción</label>
+                                        <textarea
+                                            value={editingCourse.description}
+                                            onChange={e => setEditingCourse({ ...editingCourse, description: e.target.value })}
+                                            required
+                                            rows="3"
+                                            style={{ width: '100%', padding: '0.8rem 1rem', borderRadius: '14px', border: '1.5px solid #f1f5f9', backgroundColor: '#f8fafc', outline: 'none', resize: 'none' }}
+                                        />
+                                    </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: '0.6rem', fontSize: '0.9rem', fontWeight: '600', color: '#64748b' }}>Imagen del instructor</label>
+                                            <input
+                                                placeholder='Google Drive URL'
+                                                type="text"
+                                                value={editingCourse.instructor_avatar}
+                                                onChange={e => setEditingCourse({ ...editingCourse, instructor_avatar: e.target.value })}
+                                                style={{ width: '100%', padding: '0.8rem 1rem', borderRadius: '14px', border: '1.5px solid #f1f5f9', backgroundColor: '#f8fafc', outline: 'none' }}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: '0.6rem', fontSize: '0.9rem', fontWeight: '600', color: '#64748b' }}>Nombre del instructor</label>
+                                            <input
+                                                type="text"
+                                                value={editingCourse.instructor_name}
+                                                onChange={e => setEditingCourse({ ...editingCourse, instructor_name: e.target.value })}
+                                                style={{ width: '100%', padding: '0.8rem 1rem', borderRadius: '14px', border: '1.5px solid #f1f5f9', backgroundColor: '#f8fafc', outline: 'none' }}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div style={{ marginBottom: '2rem' }}>
+                                        <label style={{ display: 'block', marginBottom: '0.6rem', fontSize: '0.9rem', fontWeight: '600', color: '#64748b' }}>Imagen de la especialidad</label>
+                                        <input
+                                            placeholder='Google Drive URL'
+                                            type="text"
+                                            value={editingCourse.thumbnail_url}
+                                            onChange={e => setEditingCourse({ ...editingCourse, thumbnail_url: e.target.value })}
+                                            required
+                                            style={{ width: '100%', padding: '0.8rem 1rem', borderRadius: '14px', border: '1.5px solid #f1f5f9', backgroundColor: '#f8fafc', outline: 'none' }}
+                                        />
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '1rem' }}>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowEditModal(false)}
+                                            style={{ flex: 1, padding: '1rem', borderRadius: '16px', border: '1.5px solid #f1f5f9', background: '#f8fafc', color: '#64748b', fontWeight: '600', cursor: 'pointer' }}
+                                        >
+                                            Cancelar
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            style={{ flex: 2, padding: '1rem', borderRadius: '16px', border: 'none', background: '#3b82f6', color: 'white', fontWeight: '600', cursor: 'pointer', boxShadow: '0 8px 15px rgba(59, 130, 246, 0.2)' }}
+                                        >
+                                            Guardar Cambios
                                         </button>
                                     </div>
                                 </form>
@@ -817,7 +1042,21 @@ const AdminCourses = () => {
                                                         }}
                                                         onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 15px 30px rgba(0,0,0,0.07)'; e.currentTarget.style.borderColor = '#dbeafe'; e.currentTarget.style.transform = 'translateY(-4px)'; }}
                                                         onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 6px 15px rgba(0,0,0,0.02)'; e.currentTarget.style.borderColor = '#f1f5f9'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                                                        draggable
+                                                        onDragStart={(e) => handleDragStart(e, index)}
+                                                        onDragEnd={handleDragEnd}
+                                                        onDragOver={handleDragOver}
+                                                        onDrop={(e) => handleDrop(e, index)}
                                                     >
+                                                        {/* Icono Burger para arrastrar */}
+                                                        <div style={{ padding: '0.5rem', cursor: 'grab', color: '#94a3b8', marginRight: '0.5rem', transition: 'color 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.color = '#3b82f6'} onMouseLeave={(e) => e.currentTarget.style.color = '#94a3b8'}>
+                                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                                <line x1="3" y1="6" x2="21" y2="6"></line>
+                                                                <line x1="3" y1="12" x2="21" y2="12"></line>
+                                                                <line x1="3" y1="18" x2="21" y2="18"></line>
+                                                            </svg>
+                                                        </div>
+
                                                         <div style={{ width: '45px', height: '45px', borderRadius: '15px', backgroundColor: '#f97316', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '1.5rem', color: 'white', fontWeight: '700', fontSize: '1rem', cursor: 'default', boxShadow: '0 6px 15px rgba(249, 115, 22, 0.25)', flexShrink: 0 }}>
                                                             {index + 1}
                                                         </div>

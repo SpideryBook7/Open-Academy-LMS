@@ -10,8 +10,57 @@ const AdminDashboard = () => {
     const [courses, setCourses] = useState([])
     const [showCourseSelector, setShowCourseSelector] = useState(false)
     const [targetFormat, setTargetFormat] = useState('')
+    const [user, setUser] = useState(null)
+    const [avatarUrl, setAvatarUrl] = useState(null)
+    const [userRole, setUserRole] = useState(null)
+    const [dominantColor, setDominantColor] = useState('rgba(0, 71, 186, 0.1)')
+    const [activities, setActivities] = useState([])
+
+    const extractColor = (url) => {
+        if (!url) return;
+        try {
+            const img = new Image();
+            img.crossOrigin = "Anonymous";
+            img.src = url;
+            img.onload = () => {
+                try {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = 10;
+                    canvas.height = 10;
+                    ctx.drawImage(img, 0, 0, 10, 10);
+                    const data = ctx.getImageData(0, 0, 10, 10).data;
+                    let r = 0, g = 0, b = 0;
+                    for (let i = 0; i < data.length; i += 4) {
+                        r += data[i]; g += data[i + 1]; b += data[i + 2];
+                    }
+                    const count = data.length / 4;
+                    r = Math.floor(r / count); g = Math.floor(g / count); b = Math.floor(b / count);
+                    setDominantColor(`rgba(${r}, ${g}, ${b}, 0.5)`);
+                } catch (e) { console.warn("Color extract failed:", e); }
+            };
+        } catch (error) { console.error("Error in extractColor:", error); }
+    };
 
     useEffect(() => {
+        const fetchUserData = async () => {
+            const { data: { session } } = await supabase.auth.getSession()
+            if (session) {
+                setUser(session.user)
+                const { data } = await supabase.from('profiles').select('avatar_url, role').eq('id', session.user.id).single()
+                if (data) {
+                    setAvatarUrl(data.avatar_url)
+                    setUserRole(data.role)
+                    if (data.avatar_url) extractColor(data.avatar_url)
+                }
+            }
+        }
+        fetchUserData()
+    }, [])
+
+    useEffect(() => {
+        if (!user) return;
+
         const fetchStats = async () => {
             try {
                 // Fetch Users Count
@@ -45,14 +94,82 @@ const AdminDashboard = () => {
             }
         }
 
+        const fetchActivities = async () => {
+            try {
+                // Get 5 latest user signups
+                const { data: newUsers } = await supabase
+                    .from('profiles')
+                    .select('full_name, created_at')
+                    .order('created_at', { ascending: false })
+                    .limit(5)
+
+                // Get 5 latest enrollments
+                const { data: newEnroll, error: enrollErr } = await supabase
+                    .from('enrollments')
+                    .select('created_at, profiles(full_name), courses(title)')
+                    .order('created_at', { ascending: false })
+                    .limit(5)
+
+                if (enrollErr) console.error("Error fetching enrollments:", enrollErr)
+
+                // Get 5 latest courses
+                const { data: newCourses } = await supabase
+                    .from('courses')
+                    .select('title, created_at')
+                    .order('created_at', { ascending: false })
+                    .limit(5)
+
+                // Get 5 latest certifications
+                const { data: newCerts } = await supabase
+                    .from('user_materials')
+                    .select('title, created_at, profiles!user_id(full_name)')
+                    .eq('category', 'Certificaciones')
+                    .order('created_at', { ascending: false })
+                    .limit(5)
+
+                let combined = []
+                if (newUsers) {
+                    newUsers.forEach(u => combined.push({
+                        type: 'user',
+                        title: `✨ Nuevo Usuario: ${u.full_name}`,
+                        date: new Date(u.created_at)
+                    }))
+                }
+                if (newEnroll) {
+                    newEnroll.forEach(e => combined.push({
+                        type: 'enroll',
+                        title: `Inscripción: ${e.profiles?.full_name} en ${e.courses?.title}`,
+                        date: new Date(e.created_at)
+                    }))
+                }
+                if (newCourses) {
+                    newCourses.forEach(c => combined.push({
+                        type: 'course',
+                        title: `🎈 Nueva Especialidad: ${c.title}`,
+                        date: new Date(c.created_at)
+                    }))
+                }
+                if (newCerts) {
+                    newCerts.forEach(cert => combined.push({
+                        type: 'cert',
+                        title: `🎉 Certificación: ${cert.title}`,
+                        subtitle: `Otorgada a: ${cert.profiles?.full_name || 'Estudiante'}`,
+                        date: new Date(cert.created_at)
+                    }))
+                }
+                setActivities(combined.sort((a,b) => b.date - a.date).slice(0, 15))
+            } catch (error) { console.error("Error fetching activity:", error) }
+        }
+
         fetchStats()
+        fetchActivities()
 
         const fetchCoursesList = async () => {
             const { data } = await supabase.from('courses').select('id, title')
             if (data) setCourses(data)
         }
         fetchCoursesList()
-    }, [])
+    }, [user])
 
     const handleQuickContent = (format) => {
         setTargetFormat(format)
@@ -94,11 +211,72 @@ const AdminDashboard = () => {
                     @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
                 `}</style>
 
-                <header style={{ marginBottom: '3.5rem', animation: 'fadeInDown 0.8s ease-out' }}>
-                    <h1 style={{ fontSize: '2.5rem', fontWeight: '800', color: '#ffffff', marginBottom: '0.25rem', letterSpacing: '-0.5px' }}>
-                        Panel del <span style={{ color: 'var(--accent-gold)', textShadow: '0 0 20px rgba(207, 170, 3, 0.92)' }}>Administrador</span>
-                    </h1>
-                    <p style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '1.1rem', fontWeight: '500' }}>Gestión centralizada de la plataforma SIRA.</p>
+                <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3.5rem', animation: 'fadeInDown 0.8s ease-out' }}>
+                    <div>
+                        <h1 style={{ fontSize: '2.5rem', fontWeight: '800', color: '#ffffff', marginBottom: '0.25rem', letterSpacing: '-0.5px' }}>
+                            Panel del <span style={{ color: 'var(--accent-gold)', textShadow: '0 0 20px rgba(207, 170, 3, 0.92)' }}>Administrador</span>
+                        </h1>
+                        <p style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '1.1rem', fontWeight: '500' }}>Gestión centralizada de la plataforma SIRA.</p>
+                    </div>
+
+                    <div
+                        onClick={() => navigate('/profile')}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '1rem',
+                            backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                            padding: '0.8rem 1.4rem',
+                            borderRadius: '22px',
+                            backdropFilter: 'blur(16px)',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.15)',
+                            cursor: 'pointer',
+                            transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.22)';
+                            e.currentTarget.style.transform = 'translateY(-3px) scale(1.02)';
+                            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.4)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.12)';
+                            e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                        }}
+                    >
+                        <div style={{
+                            position: 'relative',
+                            width: '52px',
+                            height: '52px',
+                            borderRadius: '16px',
+                            background: `linear-gradient(135deg, ${dominantColor.replace('0.5', '0.9')}, ${dominantColor.replace('0.5', '0.4')})`,
+                            padding: '3px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: `0 8px 16px -4px ${dominantColor.replace('0.5', '0.3')}`,
+                            transition: 'all 0.4s ease'
+                        }}>
+                            <img
+                                src={avatarUrl || `https://ui-avatars.com/api/?name=${user?.user_metadata?.full_name || 'Admin'}&background=random`}
+                                style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    borderRadius: '13px',
+                                    objectFit: 'cover',
+                                    border: '1px solid rgba(255, 255, 255, 0.1)'
+                                }}
+                                alt="Perfil"
+                            />
+                        </div>
+                        <div style={{ textAlign: 'left' }}>
+                            <p style={{ fontSize: '0.95rem', fontWeight: '700', color: '#ffffff', marginBottom: '0px' }}>{user?.user_metadata?.full_name || 'Administrador'}</p>
+                            <span style={{ fontSize: '0.7rem', color: 'rgba(255, 255, 255, 0.85)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                {userRole || 'Admin'}
+                            </span>
+                        </div>
+                    </div>
                 </header>
 
                 <div style={{ flex: 1, animation: 'fadeInUp 0.8s ease-out 0.2s both' }}>
@@ -216,8 +394,74 @@ const AdminDashboard = () => {
                             e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(0, 0, 0, 0.1)';
                         }}>
                         <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#0f172a', marginBottom: '1.5rem' }}>Actividad reciente del sistema</h2>
-                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0, 0, 0, 0.02)', borderRadius: '24px', border: '2px dashed rgba(0, 0, 0, 0.05)', minHeight: '300px' }}>
-                            <p style={{ color: '#64748b', fontSize: '1.1rem', fontWeight: '500', fontStyle: 'italic' }}>Los registros de actividad pronto estarán disponibles...</p>
+                        
+                        <div style={{ flex: 1, maxHeight: '480px', minHeight: '300px', overflowY: 'auto', paddingRight: '0.5rem' }} className="premium-scrollbar">
+                            {activities.length > 0 ? (
+                                Object.entries(activities.reduce((acc, obj) => {
+                                    const dateKey = obj.date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+                                    const capitalKey = dateKey.charAt(0).toUpperCase() + dateKey.slice(1);
+                                    if (!acc[capitalKey]) acc[capitalKey] = [];
+                                    acc[capitalKey].push(obj);
+                                    return acc;
+                                }, {})).map(([date, items]) => (
+                                    <div key={date} style={{ marginBottom: '2rem' }}>
+                                        <p style={{ fontSize: '0.8rem', fontWeight: '700', color: '#737475ff', textTransform: 'uppercase', marginBottom: '1rem', letterSpacing: '1px' }}>
+                                            {date}
+                                        </p>
+                                        
+                                        {items.map((item, idx) => {
+                                            const getColors = () => {
+                                                switch(item.type) {
+                                                    case 'user': return { bg: '#dbf9cf', title: '#163e05', sub: '#2d5a15ff' };
+                                                    case 'course': return { bg: '#ffeadb', title: '#854d0e', sub: '#a16207' };
+                                                    case 'cert': return { bg: '#e0f2fe', title: '#1e40af', sub: '#1e3a8a' };
+                                                    default: return { bg: '#f1f5f9', title: '#334155', sub: '#475569' };
+                                                }
+                                            };
+                                            const colors = getColors();
+
+                                            return (
+                                                <div 
+                                                    key={idx} 
+                                                    style={{ 
+                                                        backgroundColor: colors.bg, 
+                                                        padding: '1.25rem 1.8rem', 
+                                                        borderRadius: '16px', 
+                                                        marginBottom: '0.75rem',
+                                                        border: '1px solid rgba(0,0,0,0.02)',
+                                                        display: 'flex',
+                                                        justifyContent: 'space-between',
+                                                        alignItems: 'flex-start',
+                                                        gap: '1.5rem',
+                                                        boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
+                                                        animation: `fadeInLeft 0.5s ease-out ${idx * 0.1}s both`
+                                                    }}
+                                                >
+                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                        <p style={{ margin: 0, fontSize: '1.05rem', fontWeight: '700', color: colors.title, overflowWrap: 'break-word', marginBottom: item.subtitle ? '2px' : '0' }}>
+                                                            {item.title}
+                                                        </p>
+                                                        {item.subtitle && (
+                                                            <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: '600', color: colors.sub, opacity: 0.8 }}>
+                                                                {item.subtitle}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                    <div style={{ minWidth: '85px', textAlign: 'right' }}>
+                                                        <span style={{ fontSize: '0.9rem', color: colors.sub, fontStyle: 'italic', fontWeight: '600' }}>
+                                                            {item.date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase()}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                ))
+                            ) : (
+                                <div style={{ height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0, 0, 0, 0.02)', borderRadius: '24px', border: '2px dashed rgba(0, 0, 0, 0.05)' }}>
+                                    <p style={{ color: '#64748b', fontSize: '1.1rem', fontWeight: '500', fontStyle: 'italic' }}>Cargando actividad...</p>
+                                </div>
+                            )}
                         </div>
                     </div>
 

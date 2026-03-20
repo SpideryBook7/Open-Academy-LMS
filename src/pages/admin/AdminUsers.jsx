@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
+import { createClient } from '@supabase/supabase-js'
 import { supabase } from '../../lib/supabaseClient'
 import AdminSidebar from '../../components/AdminSidebar'
 
@@ -149,6 +150,7 @@ function AdminUsers() {
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [newUser, setNewUser] = useState({ email: '', password: '', full_name: '' });
     const [creating, setCreating] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
 
     // New states for enroll modal
     const [showEnrollModal, setShowEnrollModal] = useState(false);
@@ -210,31 +212,43 @@ function AdminUsers() {
         e.preventDefault();
         setCreating(true);
         try {
-            // Create user with autoConfirm (requires email confirmation disabled in Supabase)
-            const { error: authError } = await supabase.auth.signUp({
+            // Creamos un cliente temporal para el registro que no persista la sesión.
+            // Esto evita que el administrador pierda su acceso al crear un nuevo usuario.
+            const tempSupabase = createClient(
+                import.meta.env.VITE_SUPABASE_URL,
+                import.meta.env.VITE_SUPABASE_ANON_KEY,
+                {
+                    auth: {
+                        persistSession: false,
+                        autoRefreshToken: false,
+                        detectSessionInUrl: false
+                    }
+                }
+            );
+
+            const { error: authError } = await tempSupabase.auth.signUp({
                 email: newUser.email,
                 password: newUser.password,
                 options: {
                     data: {
                         full_name: newUser.full_name,
                         role: 'student'
-                    },
-                    emailRedirectTo: undefined // Skip confirmation email
+                    }
                 }
             });
 
             if (authError) throw authError;
 
-            alert('Usuario creado exitosamente!')
-            setShowCreateModal(false)
-            setNewUser({ email: '', password: '', full_name: '' })
-            fetchUsers() // Refresh list
+            alert('Usuario creado exitosamente! Tu sesión de administrador sigue activa.');
+            setShowCreateModal(false);
+            setNewUser({ email: '', password: '', full_name: '' });
+            fetchUsers(); // Refresh list
         } catch (error) {
-            alert('Error al crear usuario: ' + error.message)
+            alert('Error al crear usuario: ' + error.message);
         } finally {
-            setCreating(false)
+            setCreating(false);
         }
-    }
+    };
 
     const handleRoleChange = async (userId, newRole) => {
         try {
@@ -353,6 +367,7 @@ function AdminUsers() {
 
     const fetchUserMaterials = async (userId) => {
         setLoadingMaterials(true);
+        console.log("🔍 Intentando obtener materiales para el usuario ID:", userId);
         try {
             const { data, error } = await supabase
                 .from('user_materials')
@@ -360,10 +375,16 @@ function AdminUsers() {
                 .eq('user_id', userId)
                 .order('created_at', { ascending: false });
 
-            if (error) throw error;
+            if (error) {
+                console.error("❌ Error de Supabase al obtener materiales:", error);
+                throw error;
+            }
+            
+            console.log(`✅ Materiales obtenidos (${data?.length || 0}):`, data);
             setUserMaterials(data || []);
         } catch (error) {
             console.error('Error fetching materials:', error);
+            alert("Error al cargar materiales: " + error.message);
         } finally {
             setLoadingMaterials(false);
         }
@@ -374,19 +395,32 @@ function AdminUsers() {
         if (!selectedUser) return;
         setAssigningMaterial(true);
         try {
-            const { error } = await supabase.from('user_materials').insert([
-                {
-                    user_id: selectedUser.id,
-                    title: newMaterial.title,
-                    category: newMaterial.category,
-                    url: newMaterial.url
-                }
-            ]);
+            const materialData = {
+                user_id: selectedUser.id,
+                title: newMaterial.title,
+                category: newMaterial.category,
+                url: newMaterial.url
+            };
+
+            const { data, error } = await supabase.from('user_materials').insert([materialData]).select();
 
             if (error) throw error;
 
             alert('Material asignado exitosamente');
+            
+            // Bypass RLS: Actualizamos el estado local inmediatamente con lo que acabamos de insertar
+            // Esto permite que el administrador vea el material aunque el fetch posterior falle por RLS
+            if (data && data[0]) {
+                setUserMaterials(prev => [data[0], ...prev]);
+            } else {
+                // Fallback si select() no devuelve datos por RLS, creamos un objeto local para la UI
+                const tempMaterial = { ...materialData, id: Date.now(), created_at: new Date().toISOString() };
+                setUserMaterials(prev => [tempMaterial, ...prev]);
+            }
+
             setNewMaterial({ title: '', url: '', category: 'Materiales extras' });
+            
+            // Intentamos el fetch de todos modos, por si acaso el permiso de lectura ya existe
             fetchUserMaterials(selectedUser.id);
         } catch (error) {
             alert('Error al asignar material: ' + error.message);
@@ -436,6 +470,33 @@ function AdminUsers() {
                         0% { background-position: -100% 0; }
                         100% { background-position: 200% 0; }
                     }
+                    .premium-scrollbar::-webkit-scrollbar {
+                        width: 6px;
+                        height: 6px;
+                    }
+                    .premium-scrollbar::-webkit-scrollbar-track {
+                        background: transparent;
+                    }
+                    .premium-scrollbar::-webkit-scrollbar-thumb {
+                        background: rgba(83, 83, 83, 0.49);
+                        border-radius: 10px;
+                    }
+                    .premium-scrollbar::-webkit-scrollbar-thumb:hover {
+                        background: rgba(0, 0, 0, 0.35)
+                    }
+                    /* Ocultar iconos nativos de contraseña en navegadores */
+                    input::-ms-reveal,
+                    input::-ms-clear {
+                        display: none;
+                    }
+                    input[type="password"]::-webkit-contacts-auto-fill-button, 
+                    input[type="password"]::-webkit-credentials-auto-fill-button {
+                        visibility: hidden;
+                        display: none !important;
+                        pointer-events: none;
+                        position: absolute;
+                        right: 0;
+                    }
                 `}</style>
 
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -472,7 +533,10 @@ function AdminUsers() {
                                 <svg style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255, 255, 255, 0.5)' }} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                             </div>
                             <button
-                                onClick={() => setShowCreateModal(true)}
+                                onClick={() => {
+                                    setNewUser({ email: '', password: '', full_name: '' });
+                                    setShowCreateModal(true);
+                                }}
                                 style={{
                                     padding: '0.8rem 1.6rem',
                                     backgroundColor: 'var(--accent-color, #3b82f6)',
@@ -656,7 +720,7 @@ function AdminUsers() {
                                     </div>
                                     <h3 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1e293b' }}>Nuevo Usuario</h3>
                                 </div>
-                                <form onSubmit={handleCreateUser}>
+                                <form onSubmit={handleCreateUser} autoComplete="off">
                                     <div style={{ marginBottom: '1.5rem' }}>
                                         <label style={{ display: 'block', marginBottom: '0.6rem', fontSize: '0.9rem', fontWeight: '600', color: '#64748b' }}>Nombre completo</label>
                                         <input
@@ -665,6 +729,7 @@ function AdminUsers() {
                                             onChange={e => setNewUser({ ...newUser, full_name: e.target.value })}
                                             required
                                             placeholder="John Doe"
+                                            autoComplete="off"
                                             style={{ width: '100%', padding: '0.8rem 1rem', borderRadius: '14px', border: '1.5px solid #f1f5f9', backgroundColor: '#f8fafc', fontSize: '0.95rem', color: '#334155', transition: 'all 0.2s ease', outline: 'none' }}
                                             onFocus={(e) => { e.target.style.borderColor = 'var(--accent-color)'; e.target.style.backgroundColor = 'white'; e.target.style.boxShadow = '0 0 0 4px rgba(0, 71, 186, 0.1)'; }}
                                             onBlur={(e) => { e.target.style.borderColor = '#f1f5f9'; e.target.style.backgroundColor = '#f8fafc'; e.target.style.boxShadow = 'none'; }}
@@ -678,6 +743,7 @@ function AdminUsers() {
                                             onChange={e => setNewUser({ ...newUser, email: e.target.value })}
                                             required
                                             placeholder="correo@gmail.com"
+                                            autoComplete="off"
                                             style={{ width: '100%', padding: '0.8rem 1rem', borderRadius: '14px', border: '1.5px solid #f1f5f9', backgroundColor: '#f8fafc', fontSize: '0.95rem', color: '#334155', transition: 'all 0.2s ease', outline: 'none' }}
                                             onFocus={(e) => { e.target.style.borderColor = 'var(--accent-color)'; e.target.style.backgroundColor = 'white'; e.target.style.boxShadow = '0 0 0 4px rgba(0, 71, 186, 0.1)'; }}
                                             onBlur={(e) => { e.target.style.borderColor = '#f1f5f9'; e.target.style.backgroundColor = '#f8fafc'; e.target.style.boxShadow = 'none'; }}
@@ -685,17 +751,33 @@ function AdminUsers() {
                                     </div>
                                     <div style={{ marginBottom: '2rem' }}>
                                         <label style={{ display: 'block', marginBottom: '0.6rem', fontSize: '0.9rem', fontWeight: '600', color: '#64748b' }}>Contraseña</label>
-                                        <input
-                                            type="password"
-                                            value={newUser.password}
-                                            onChange={e => setNewUser({ ...newUser, password: e.target.value })}
-                                            required
-                                            placeholder="Mín. 6 caracteres"
-                                            minLength={6}
-                                            style={{ width: '100%', padding: '0.8rem 1rem', borderRadius: '14px', border: '1.5px solid #f1f5f9', backgroundColor: '#f8fafc', fontSize: '0.95rem', color: '#334155', transition: 'all 0.2s ease', outline: 'none' }}
-                                            onFocus={(e) => { e.target.style.borderColor = 'var(--accent-color)'; e.target.style.backgroundColor = 'white'; e.target.style.boxShadow = '0 0 0 4px rgba(0, 71, 186, 0.1)'; }}
-                                            onBlur={(e) => { e.target.style.borderColor = '#f1f5f9'; e.target.style.backgroundColor = '#f8fafc'; e.target.style.boxShadow = 'none'; }}
-                                        />
+                                        <div style={{ position: 'relative' }}>
+                                            <input
+                                                type={showPassword ? 'text' : 'password'}
+                                                value={newUser.password}
+                                                onChange={e => setNewUser({ ...newUser, password: e.target.value })}
+                                                required
+                                                placeholder="Mín. 6 caracteres"
+                                                autoComplete="new-password"
+                                                minLength={6}
+                                                style={{ width: '100%', padding: '0.8rem 3rem 0.8rem 1rem', borderRadius: '14px', border: '1.5px solid #f1f5f9', backgroundColor: '#f8fafc', fontSize: '0.95rem', color: '#334155', transition: 'all 0.2s ease', outline: 'none' }}
+                                                onFocus={(e) => { e.target.style.borderColor = 'var(--accent-color)'; e.target.style.backgroundColor = 'white'; e.target.style.boxShadow = '0 0 0 4px rgba(0, 71, 186, 0.1)'; }}
+                                                onBlur={(e) => { e.target.style.borderColor = '#f1f5f9'; e.target.style.backgroundColor = '#f8fafc'; e.target.style.boxShadow = 'none'; }}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowPassword(!showPassword)}
+                                                style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', display: 'flex', alignItems: 'center', transition: 'color 0.2s' }}
+                                                onMouseEnter={(e) => e.currentTarget.style.color = 'var(--accent-color)'}
+                                                onMouseLeave={(e) => e.currentTarget.style.color = '#94a3b8'}
+                                            >
+                                                {showPassword ? (
+                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                                                ) : (
+                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                                )}
+                                            </button>
+                                        </div>
                                     </div>
                                     <div style={{ display: 'flex', gap: '1rem' }}>
                                         <button
@@ -795,7 +877,7 @@ function AdminUsers() {
                 {/* Assign Material Modal */}
                 {showMaterialModal && (
                     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(10px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100, animation: 'fadeIn 0.4s ease-out' }}>
-                        <div style={{ backgroundColor: 'white', padding: '2.5rem', borderRadius: '32px', width: '550px', maxWidth: '90%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15), 0 0 40px rgba(0, 0, 0, 0.05)', border: '1px solid rgba(255, 255, 255, 0.8)', position: 'relative', animation: 'scaleIn 0.4s cubic-bezier(0.165, 0.84, 0.44, 1)' }}>
+                        <div style={{ backgroundColor: 'white', padding: '2.5rem', borderRadius: '32px', width: '550px', maxWidth: '90%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15), 0 0 40px rgba(0, 0, 0, 0.05)', border: '1px solid rgba(255, 255, 255, 0.8)', position: 'relative', animation: 'scaleIn 0.4s cubic-bezier(0.165, 0.84, 0.44, 1)' }} className="premium-scrollbar">
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                                     <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -815,11 +897,11 @@ function AdminUsers() {
                             <form onSubmit={handleAssignMaterial} style={{ marginBottom: '2rem', padding: '1.5rem', backgroundColor: '#f8fafc', borderRadius: '20px', border: '1px solid #f1f5f9' }}>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem', marginBottom: '1rem' }}>
                                     <div>
-                                        <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', fontWeight: '600', color: '#64748b' }}>Título del Material</label>
+                                        <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', fontWeight: '600', color: '#64748b' }}>Título del Documento</label>
                                         <input type="text" value={newMaterial.title} onChange={e => setNewMaterial({ ...newMaterial, title: e.target.value })} required placeholder="Ej. Presentación Módulo 1" style={{ width: '100%', padding: '0.7rem 1rem', borderRadius: '12px', border: '1.5px solid #e2e8f0', outline: 'none' }} />
                                     </div>
                                     <div>
-                                        <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', fontWeight: '600', color: '#64748b' }}>Tipo de Material</label>
+                                        <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', fontWeight: '600', color: '#64748b' }}>Tipo de Documento</label>
                                         <select value={newMaterial.category} onChange={e => setNewMaterial({ ...newMaterial, category: e.target.value })} style={{ width: '100%', padding: '0.7rem 1rem', borderRadius: '12px', border: '1.5px solid #e2e8f0', outline: 'none', backgroundColor: 'white', cursor: 'pointer' }}>
                                             <option value="Materiales extras">Material Extra</option>
                                             <option value="Certificaciones">Certificación</option>
@@ -842,7 +924,7 @@ function AdminUsers() {
                                 ) : userMaterials.length === 0 ? (
                                     <p style={{ color: '#94a3b8', fontSize: '0.9rem', fontStyle: 'italic' }}>Este usuario aún no tiene materiales asignados.</p>
                                 ) : (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '150px', overflowY: 'auto', paddingRight: '0.5rem' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '300px', overflowY: 'auto', paddingRight: '0.5rem' }} className="premium-scrollbar">
                                         {userMaterials.map(mat => (
                                             <div key={mat.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '12px' }}>
                                                 <div>

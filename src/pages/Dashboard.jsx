@@ -343,16 +343,27 @@ const Dashboard = () => {
                             e.currentTarget.style.boxShadow = '0 8px 32px 0 rgba(0, 0, 0, 0.15)';
                         }}
                     >
-                        <div style={{ position: 'relative' }}>
+                        <div style={{
+                            position: 'relative',
+                            width: '52px',
+                            height: '52px',
+                            borderRadius: '16px',
+                            background: `linear-gradient(135deg, ${dominantColor.replace('0.5', '0.9')}, ${dominantColor.replace('0.5', '0.4')})`,
+                            padding: '3px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: `0 8px 16px -4px ${dominantColor.replace('0.5', '0.3')}`,
+                            transition: 'all 0.4s ease'
+                        }}>
                             <img
                                 src={avatarUrl || `https://ui-avatars.com/api/?name=${user?.user_metadata?.full_name || 'User'}&background=random`}
                                 style={{
-                                    width: '48px',
-                                    height: '48px',
-                                    borderRadius: '14px',
-                                    border: `2px solid ${dominantColor.replace('0.5', '0.8')}`,
-                                    boxShadow: `0 4px 12px ${dominantColor.replace('0.5', '0.3')}`,
-                                    objectFit: 'cover'
+                                    width: '100%',
+                                    height: '100%',
+                                    borderRadius: '13px',
+                                    objectFit: 'cover',
+                                    border: '1px solid rgba(255, 255, 255, 0.1)'
                                 }}
                                 alt="Perfil"
                             />
