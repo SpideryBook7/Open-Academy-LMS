@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { createClient } from '@supabase/supabase-js'
 import { supabase } from '../../lib/supabaseClient'
+import { adminSupabase } from '../../lib/adminSupabase'
 import AdminSidebar from '../../components/AdminSidebar'
 
 const ExpandableEnrollments = ({ enrollments, getCourseTitle, onEnrollClick, onUnenrollClick }) => {
@@ -369,7 +370,7 @@ function AdminUsers() {
         setLoadingMaterials(true);
         console.log("🔍 Intentando obtener materiales para el usuario ID:", userId);
         try {
-            const { data, error } = await supabase
+            const { data, error } = await adminSupabase
                 .from('user_materials')
                 .select('*')
                 .eq('user_id', userId)
@@ -402,11 +403,11 @@ function AdminUsers() {
                 url: newMaterial.url
             };
 
-            const { data, error } = await supabase.from('user_materials').insert([materialData]).select();
+            const { data, error } = await adminSupabase.from('user_materials').insert([materialData]).select();
 
             if (error) throw error;
 
-            alert('Material asignado exitosamente');
+            alert('Documento asignado correctamente');
             
             // Bypass RLS: Actualizamos el estado local inmediatamente con lo que acabamos de insertar
             // Esto permite que el administrador vea el material aunque el fetch posterior falle por RLS
@@ -423,20 +424,20 @@ function AdminUsers() {
             // Intentamos el fetch de todos modos, por si acaso el permiso de lectura ya existe
             fetchUserMaterials(selectedUser.id);
         } catch (error) {
-            alert('Error al asignar material: ' + error.message);
+            alert('Error al asignar documento: ' + error.message);
         } finally {
             setAssigningMaterial(false);
         }
     };
 
     const handleDeleteMaterial = async (materialId) => {
-        if (!window.confirm('¿Seguro que quieres eliminar este material?')) return;
+        if (!window.confirm('¿Seguro que quieres eliminar este documento?')) return;
         try {
-            const { error } = await supabase.from('user_materials').delete().eq('id', materialId);
+            const { error } = await adminSupabase.from('user_materials').delete().eq('id', materialId);
             if (error) throw error;
             fetchUserMaterials(selectedUser.id);
         } catch (error) {
-            alert('Error al eliminar material: ' + error.message);
+            alert('Error al eliminar documento: ' + error.message);
         }
     };
 
@@ -876,14 +877,14 @@ function AdminUsers() {
 
                 {/* Assign Material Modal */}
                 {showMaterialModal && (
-                    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(10px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100, animation: 'fadeIn 0.4s ease-out' }}>
-                        <div style={{ backgroundColor: 'white', padding: '2.5rem', borderRadius: '32px', width: '550px', maxWidth: '90%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15), 0 0 40px rgba(0, 0, 0, 0.05)', border: '1px solid rgba(255, 255, 255, 0.8)', position: 'relative', animation: 'scaleIn 0.4s cubic-bezier(0.165, 0.84, 0.44, 1)' }} className="premium-scrollbar">
+                    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(10px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100 }}>
+                        <div style={{ backgroundColor: 'white', padding: '2.5rem', borderRadius: '32px', width: '550px', maxWidth: '90%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15)', border: '1px solid rgba(255, 255, 255, 0.8)', position: 'relative' }} className="premium-scrollbar">
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                                     <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
                                     </div>
-                                    <h3 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1e293b' }}>Certificados y Materiales</h3>
+                                    <h3 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1e293b' }}>Gestión de Documentos</h3>
                                 </div>
                                 <button onClick={() => setShowMaterialModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}>
                                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -891,54 +892,85 @@ function AdminUsers() {
                             </div>
 
                             <p style={{ marginBottom: '1.5rem', color: '#64748b', fontSize: '1rem', fontWeight: '500' }}>
-                                Asignando al usuario <strong style={{ color: '#1e293b' }}>{selectedUser?.full_name}</strong>
+                                Editando a <strong style={{ color: '#1e293b' }}>{selectedUser?.full_name}</strong>
                             </p>
 
-                            <form onSubmit={handleAssignMaterial} style={{ marginBottom: '2rem', padding: '1.5rem', backgroundColor: '#f8fafc', borderRadius: '20px', border: '1px solid #f1f5f9' }}>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem', marginBottom: '1rem' }}>
+                            <form onSubmit={handleAssignMaterial} style={{ marginBottom: '2.5rem', padding: '1.5rem', backgroundColor: '#f8fafc', borderRadius: '20px', border: '1px solid #f1f5f9' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem', marginBottom: '1.5rem' }}>
                                     <div>
-                                        <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', fontWeight: '600', color: '#64748b' }}>Título del Documento</label>
-                                        <input type="text" value={newMaterial.title} onChange={e => setNewMaterial({ ...newMaterial, title: e.target.value })} required placeholder="Ej. Presentación Módulo 1" style={{ width: '100%', padding: '0.7rem 1rem', borderRadius: '12px', border: '1.5px solid #e2e8f0', outline: 'none' }} />
+                                        <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', fontWeight: '600', color: '#64748b' }}>Título</label>
+                                        <input type="text" value={newMaterial.title} onChange={e => setNewMaterial({ ...newMaterial, title: e.target.value })} required placeholder="Ej. Certificado de Especialidad" style={{ width: '100%', padding: '0.8rem 1rem', borderRadius: '12px', border: '1.5px solid #e2e8f0', outline: 'none' }} />
                                     </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', fontWeight: '600', color: '#64748b' }}>Tipo de Documento</label>
-                                        <select value={newMaterial.category} onChange={e => setNewMaterial({ ...newMaterial, category: e.target.value })} style={{ width: '100%', padding: '0.7rem 1rem', borderRadius: '12px', border: '1.5px solid #e2e8f0', outline: 'none', backgroundColor: 'white', cursor: 'pointer' }}>
-                                            <option value="Materiales extras">Material Extra</option>
-                                            <option value="Certificaciones">Certificación</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', fontWeight: '600', color: '#64748b' }}>Enlace del documento (Drive)</label>
-                                        <input type="url" value={newMaterial.url} onChange={e => setNewMaterial({ ...newMaterial, url: e.target.value })} required placeholder="https://drive.google.com/..." style={{ width: '100%', padding: '0.7rem 1rem', borderRadius: '12px', border: '1.5px solid #e2e8f0', outline: 'none' }} />
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', fontWeight: '600', color: '#64748b' }}>Categoría</label>
+                                            <select value={newMaterial.category} onChange={e => setNewMaterial({ ...newMaterial, category: e.target.value })} style={{ width: '100%', padding: '0.8rem', borderRadius: '12px', border: '1.5px solid #e2e8f0', backgroundColor: 'white' }}>
+                                                <option value="Certificaciones">Certificación</option>
+                                                <option value="Materiales extras">Material Extra</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', fontWeight: '600', color: '#64748b' }}>URL Drive</label>
+                                            <input type="url" value={newMaterial.url} onChange={e => setNewMaterial({ ...newMaterial, url: e.target.value })} required placeholder="https://drive..." style={{ width: '100%', padding: '0.8rem', borderRadius: '12px', border: '1.5px solid #e2e8f0' }} />
+                                        </div>
                                     </div>
                                 </div>
-                                <button type="submit" disabled={assigningMaterial} style={{ width: '100%', padding: '0.8rem', borderRadius: '12px', border: 'none', background: '#3b82f6', color: 'white', fontWeight: '600', cursor: assigningMaterial ? 'not-allowed' : 'pointer' }}>
-                                    {assigningMaterial ? 'Asignando...' : '+ Asignar'}
+                                <button type="submit" disabled={assigningMaterial} style={{ width: '100%', padding: '1rem', borderRadius: '14px', border: 'none', background: '#3b82f6', color: 'white', fontWeight: '700', cursor: 'pointer' }}>
+                                    {assigningMaterial ? 'Procesando...' : '+ Asignar Documento'}
                                 </button>
                             </form>
 
-                            <div>
-                                <h4 style={{ fontSize: '1.1rem', fontWeight: '700', color: '#1e293b', marginBottom: '1rem' }}>Materiales Asignados</h4>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                                 {loadingMaterials ? (
-                                    <p style={{ color: '#64748b', fontSize: '0.9rem' }}>Cargando materiales...</p>
-                                ) : userMaterials.length === 0 ? (
-                                    <p style={{ color: '#94a3b8', fontSize: '0.9rem', fontStyle: 'italic' }}>Este usuario aún no tiene materiales asignados.</p>
+                                    <p style={{ textAlign: 'center', color: '#64748b' }}>Cargando...</p>
                                 ) : (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '300px', overflowY: 'auto', paddingRight: '0.5rem' }} className="premium-scrollbar">
-                                        {userMaterials.map(mat => (
-                                            <div key={mat.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '12px' }}>
-                                                <div>
-                                                    <p style={{ margin: 0, fontWeight: '600', color: '#1e293b', fontSize: '0.95rem' }}>{mat.title}</p>
-                                                    <p style={{ margin: 0, color: '#64748b', fontSize: '0.8rem', marginTop: '0.2rem' }}>
-                                                        {mat.category === 'Certificaciones' ? 'Certificación' : 'Enlace a Drive'}
-                                                    </p>
-                                                </div>
-                                                <button onClick={() => handleDeleteMaterial(mat.id)} style={{ padding: '0.5rem', borderRadius: '8px', border: 'none', backgroundColor: '#fee2e2', color: '#ef4444', cursor: 'pointer' }}>
-                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                                                </button>
+                                    <>
+                                        {/* Certificados */}
+                                        <div>
+                                            <h4 style={{ fontSize: '1rem', fontWeight: '800', color: '#1e293b', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                <div style={{ width: '4px', height: '16px', backgroundColor: '#fbbf24', borderRadius: '2px' }}></div>
+                                                Certificados Otorgados
+                                            </h4>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                                {userMaterials.filter(m => m.category === 'Certificaciones').length > 0 ? (
+                                                    userMaterials.filter(m => m.category === 'Certificaciones').map(mat => (
+                                                        <div key={mat.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', backgroundColor: '#fffbeb', border: '1px solid #fde68a', borderRadius: '16px' }}>
+                                                            <div style={{ flex: 1 }}>
+                                                                <p style={{ margin: 0, fontWeight: '700', color: '#92400e', fontSize: '0.95rem' }}>{mat.title}</p>
+                                                                <p style={{ margin: 0, color: '#b45309', fontSize: '0.75rem', marginTop: '0.2rem', fontWeight: '600' }}>🏆 Certificación</p>
+                                                            </div>
+                                                            <button onClick={() => handleDeleteMaterial(mat.id)} style={{ padding: '0.6rem', borderRadius: '10px', backgroundColor: '#fee2e2', color: '#ef4444', border: 'none', cursor: 'pointer' }}>
+                                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                                            </button>
+                                                        </div>
+                                                    ))
+                                                ) : <p style={{ color: '#94a3b8', fontSize: '0.9rem', fontStyle: 'italic', marginLeft: '0.5rem' }}>No hay certificados aún.</p>}
                                             </div>
-                                        ))}
-                                    </div>
+                                        </div>
+
+                                        {/* Otros Materiales */}
+                                        <div>
+                                            <h4 style={{ fontSize: '1rem', fontWeight: '800', color: '#1e293b', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                <div style={{ width: '4px', height: '16px', backgroundColor: '#3b82f6', borderRadius: '2px' }}></div>
+                                                Materiales Adicionales
+                                            </h4>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                                {userMaterials.filter(m => m.category !== 'Certificaciones').length > 0 ? (
+                                                    userMaterials.filter(m => m.category !== 'Certificaciones').map(mat => (
+                                                        <div key={mat.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '16px' }}>
+                                                            <div style={{ flex: 1 }}>
+                                                                <p style={{ margin: 0, fontWeight: '700', color: '#1e293b', fontSize: '0.95rem' }}>{mat.title}</p>
+                                                                <p style={{ margin: 0, color: '#64748b', fontSize: '0.75rem', marginTop: '0.2rem', fontWeight: '600' }}>🔗 Recurso Drive</p>
+                                                            </div>
+                                                            <button onClick={() => handleDeleteMaterial(mat.id)} style={{ padding: '0.6rem', borderRadius: '10px', backgroundColor: '#fee2e2', color: '#ef4444', border: 'none', cursor: 'pointer' }}>
+                                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                                            </button>
+                                                        </div>
+                                                    ))
+                                                ) : <p style={{ color: '#94a3b8', fontSize: '0.9rem', fontStyle: 'italic', marginLeft: '0.5rem' }}>No hay materiales aún.</p>}
+                                            </div>
+                                        </div>
+                                    </>
                                 )}
                             </div>
                         </div>

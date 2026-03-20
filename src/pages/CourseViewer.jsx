@@ -4,6 +4,17 @@ import { supabase } from '../lib/supabaseClient'
 import Sidebar from '../components/Sidebar'
 import confetti from 'canvas-confetti'
 
+// Helper: Convert Google Drive Link to direct image link
+const convertDriveUrl = (url) => {
+    if (!url || (!url.includes('drive.google.com') && !url.includes('docs.google.com'))) return url;
+    const driveRegex = /(?:\/d\/|id=)([\w-]+)/;
+    const match = url.match(driveRegex);
+    if (match && match[1]) {
+        return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1000`;
+    }
+    return url;
+};
+
 // Basic Quiz Component
 const QuizPlayer = ({ lessonData, courseId, dominantColor, onNextLesson, hasNextLesson }) => {
     const questions = useMemo(() => {
@@ -416,10 +427,10 @@ const CourseViewer = () => {
                     .single()
 
                 if (profileData) {
-                    setAvatarUrl(profileData.avatar_url)
+                    setAvatarUrl(convertDriveUrl(profileData.avatar_url))
                     setUserRole(profileData.role)
                     setUserName(session.user.user_metadata?.full_name || session.user.user_metadata?.name || 'Usuario')
-                    if (profileData.avatar_url) extractColor(profileData.avatar_url, true)
+                    if (profileData.avatar_url) extractColor(convertDriveUrl(profileData.avatar_url), true)
                 }
 
                 // 1. Fetch Course Info
@@ -430,8 +441,13 @@ const CourseViewer = () => {
                     .single()
 
                 if (courseError) throw courseError
-                setCourse(courseData)
-                if (courseData.thumbnail_url) extractColor(courseData.thumbnail_url, false)
+                const formattedCourse = {
+                    ...courseData,
+                    thumbnail_url: convertDriveUrl(courseData.thumbnail_url),
+                    instructor_avatar: convertDriveUrl(courseData.instructor_avatar)
+                }
+                setCourse(formattedCourse)
+                if (formattedCourse.thumbnail_url) extractColor(formattedCourse.thumbnail_url, false)
 
                 // 1.5 Fetch Enrollment to sync progress (Check if it's a new enrollment to reset local progress)
                 const { data: enrollmentData } = await supabase

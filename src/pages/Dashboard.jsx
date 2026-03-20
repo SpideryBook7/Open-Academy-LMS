@@ -37,6 +37,16 @@ const Dashboard = () => {
     const [myCourses, setMyCourses] = useState([])
     const [currentSlide, setCurrentSlide] = useState(0)
     const [dominantColor, setDominantColor] = useState('rgba(0, 71, 186, 0.1)') // Default brand color
+    // Helper: Convert Google Drive Link to direct image link
+    const convertDriveUrl = (url) => {
+        if (!url || (!url.includes('drive.google.com') && !url.includes('docs.google.com'))) return url;
+        const driveRegex = /(?:\/d\/|id=)([\w-]+)/;
+        const match = url.match(driveRegex);
+        if (match && match[1]) {
+            return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1000`;
+        }
+        return url;
+    };
 
     // Function to extract dominant color from image
     const extractColor = (url) => {
@@ -102,10 +112,10 @@ const Dashboard = () => {
                 .single()
 
             if (data) {
-                setAvatarUrl(data.avatar_url)
+                setAvatarUrl(convertDriveUrl(data.avatar_url))
                 setDescription(data.description)
                 setUserRole(data.role)
-                if (data.avatar_url) extractColor(data.avatar_url)
+                if (data.avatar_url) extractColor(convertDriveUrl(data.avatar_url))
             }
 
             const { data: eventsData } = await supabase
@@ -127,7 +137,7 @@ const Dashboard = () => {
                 const courseIds = enrollmentData.map(e => e.course_id)
                 const { data: coursesData } = await supabase
                     .from('courses')
-                    .select('id, title, description, thumbnail_url')
+                    .select('id, title, description, thumbnail_url, instructor_name, instructor_avatar')
                     .in('id', courseIds)
                 
                 const { data: lessonsData } = await supabase
@@ -183,7 +193,9 @@ const Dashboard = () => {
                         id: course.id,
                         title: course.title,
                         description: course.description,
-                        image: course.thumbnail_url || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
+                        image: convertDriveUrl(course.thumbnail_url) || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
+                        instructor_name: course.instructor_name || 'Instructor DiPAAm',
+                        instructor_avatar: convertDriveUrl(course.instructor_avatar),
                         progress: progress,
                         status: progress === 100 ? 'Completada' : 'Activa'
                     }
@@ -495,6 +507,7 @@ const Dashboard = () => {
                                                     }}></div>
                                                 </div>
                                             </div>
+
                                             <div style={{ display: 'flex', gap: '0.75rem', width: '100%', alignItems: 'stretch' }}>
                                                 {course.progress === 100 && (
                                                     <button

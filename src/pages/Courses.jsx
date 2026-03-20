@@ -15,6 +15,17 @@ const Courses = () => {
     const [showFilterDropdown, setShowFilterDropdown] = useState(false)
     const [dominantColor, setDominantColor] = useState('rgba(0, 71, 186, 0.1)') // Default brand color
 
+    // Helper: Convert Google Drive Link to direct image link
+    const convertDriveUrl = (url) => {
+        if (!url || (!url.includes('drive.google.com') && !url.includes('docs.google.com'))) return url;
+        const driveRegex = /(?:\/d\/|id=)([\w-]+)/;
+        const match = url.match(driveRegex);
+        if (match && match[1]) {
+            return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1000`;
+        }
+        return url;
+    };
+
     // Function to extract dominant color from image
     const extractColor = (url) => {
         if (!url) return;
@@ -79,9 +90,9 @@ const Courses = () => {
                     .single()
 
                 if (profileData) {
-                    setAvatarUrl(profileData.avatar_url)
+                    setAvatarUrl(convertDriveUrl(profileData.avatar_url))
                     setUserRole(profileData.role)
-                    if (profileData.avatar_url) extractColor(profileData.avatar_url)
+                    if (profileData.avatar_url) extractColor(convertDriveUrl(profileData.avatar_url))
                 }
 
                 // 1. Fetch Enrolled Courses
@@ -160,7 +171,7 @@ const Courses = () => {
                             id: course.id,
                             title: course.title,
                             description: course.description,
-                            image: course.thumbnail_url || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
+                            image: convertDriveUrl(course.thumbnail_url) || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
                             progress: progress,
                             status: progress === 100 ? 'Completada' : 'Activa'
                         }

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabaseClient'
+import { adminSupabase } from '../../lib/adminSupabase'
 import AdminSidebar from '../../components/AdminSidebar'
 
 const AdminDashboard = () => {
@@ -64,19 +65,19 @@ const AdminDashboard = () => {
         const fetchStats = async () => {
             try {
                 // Fetch Users Count
-                const { count: userCount, error: userError } = await supabase
+                const { count: userCount, error: userError } = await adminSupabase
                     .from('profiles')
                     .select('*', { count: 'exact', head: true })
                 if (userError) throw userError
 
                 // Fetch Courses Count
-                const { count: courseCount, error: courseError } = await supabase
+                const { count: courseCount, error: courseError } = await adminSupabase
                     .from('courses')
                     .select('*', { count: 'exact', head: true })
                 if (courseError) throw courseError
 
                 // Fetch Enrollments Count
-                const { count: enrollmentCount, error: enrollmentError } = await supabase
+                const { count: enrollmentCount, error: enrollmentError } = await adminSupabase
                     .from('enrollments')
                     .select('*', { count: 'exact', head: true })
                 if (enrollmentError) throw enrollmentError
@@ -97,14 +98,14 @@ const AdminDashboard = () => {
         const fetchActivities = async () => {
             try {
                 // Get 5 latest user signups
-                const { data: newUsers } = await supabase
+                const { data: newUsers } = await adminSupabase
                     .from('profiles')
                     .select('full_name, created_at')
                     .order('created_at', { ascending: false })
                     .limit(5)
 
                 // Get 5 latest enrollments
-                const { data: newEnroll, error: enrollErr } = await supabase
+                const { data: newEnroll, error: enrollErr } = await adminSupabase
                     .from('enrollments')
                     .select('created_at, profiles(full_name), courses(title)')
                     .order('created_at', { ascending: false })
@@ -113,14 +114,14 @@ const AdminDashboard = () => {
                 if (enrollErr) console.error("Error fetching enrollments:", enrollErr)
 
                 // Get 5 latest courses
-                const { data: newCourses } = await supabase
+                const { data: newCourses } = await adminSupabase
                     .from('courses')
                     .select('title, created_at')
                     .order('created_at', { ascending: false })
                     .limit(5)
 
                 // Get 5 latest certifications
-                const { data: newCerts } = await supabase
+                const { data: newCerts } = await adminSupabase
                     .from('user_materials')
                     .select('title, created_at, profiles!user_id(full_name)')
                     .eq('category', 'Certificaciones')
