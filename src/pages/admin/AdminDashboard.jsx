@@ -104,14 +104,35 @@ const AdminDashboard = () => {
                     .order('created_at', { ascending: false })
                     .limit(5)
 
-                // Get 5 latest enrollments
-                const { data: newEnroll, error: enrollErr } = await adminSupabase
+                // Get 5 latest enrollments (avoiding FK join since no constraint exists)
+                const { data: rawEnroll, error: enrollErr } = await adminSupabase
                     .from('enrollments')
-                    .select('created_at, profiles(full_name), courses(title)')
+                    .select('created_at, user_id, course_id')
                     .order('created_at', { ascending: false })
                     .limit(5)
 
                 if (enrollErr) console.error("Error fetching enrollments:", enrollErr)
+
+                // Enrich enrollments with user and course names
+                let newEnroll = []
+                if (rawEnroll && rawEnroll.length > 0) {
+                    const userIds = [...new Set(rawEnroll.map(e => e.user_id))]
+                    const courseIds = [...new Set(rawEnroll.map(e => e.course_id))]
+
+                    const [{ data: enrollProfiles }, { data: enrollCourses }] = await Promise.all([
+                        adminSupabase.from('profiles').select('id, full_name').in('id', userIds),
+                        adminSupabase.from('courses').select('id, title').in('id', courseIds)
+                    ])
+
+                    const profilesMap = Object.fromEntries((enrollProfiles || []).map(p => [p.id, p]))
+                    const coursesMap = Object.fromEntries((enrollCourses || []).map(c => [c.id, c]))
+
+                    newEnroll = rawEnroll.map(e => ({
+                        created_at: e.created_at,
+                        profiles: profilesMap[e.user_id] || null,
+                        courses: coursesMap[e.course_id] || null
+                    }))
+                }
 
                 // Get 5 latest courses
                 const { data: newCourses } = await adminSupabase
