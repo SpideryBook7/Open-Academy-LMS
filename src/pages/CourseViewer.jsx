@@ -480,7 +480,7 @@ const CourseViewer = () => {
                 if (lessonsData && lessonsData.length > 0) {
                     const savedLessonId = localStorage.getItem(`lms_last_active_lesson_${id}`);
                     const savedLesson = savedLessonId ? lessonsData.find(l => String(l.id) === String(savedLessonId)) : null;
-                    
+
                     if (savedLesson) {
                         setActiveLesson(savedLesson);
                     } else {
@@ -580,7 +580,7 @@ const CourseViewer = () => {
                 if (player && typeof player.getCurrentTime === 'function') {
                     const currentTime = player.getCurrentTime();
                     const duration = player.getDuration();
-                    
+
                     if (currentTime > 0) {
                         localStorage.setItem(`lms_video_time_${activeLesson.id}`, currentTime.toString());
                     }
@@ -600,7 +600,7 @@ const CourseViewer = () => {
         const initPlayer = () => {
             const startTime = Math.floor(parseFloat(localStorage.getItem(`lms_video_time_${activeLesson.id}`) || '0'));
             const container = document.getElementById('youtube-player');
-            
+
             if (!container) return; // Wait for next tick/render
 
             if (playerRef.current && typeof playerRef.current.loadVideoById === 'function') {
@@ -661,10 +661,10 @@ const CourseViewer = () => {
 
     useEffect(() => {
         if (loading || lessons.length === 0 || completedLessons.length === 0) return;
-        
+
         const allLessonsCompleted = lessons.every(l => completedLessons.includes(l.id));
         const hasOverlayBeenShown = localStorage.getItem(`lms_completion_shown_${id}`);
-        
+
         if (allLessonsCompleted && !hasOverlayBeenShown) {
             setShowCompletionOverlay(true);
             localStorage.setItem(`lms_completion_shown_${id}`, 'true');
