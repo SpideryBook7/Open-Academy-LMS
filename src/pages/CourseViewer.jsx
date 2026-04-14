@@ -93,8 +93,17 @@ const QuizPlayer = ({ lessonData, courseId, dominantColor, onNextLesson, hasNext
                         localStorage.setItem(completedKey, JSON.stringify(completed));
                         // Dispatch event so parent can re-check locks
                         window.dispatchEvent(new Event('lesson_completed'));
+
+                        // Sync with DB
+                        const { data: { session: currentSession } } = await supabase.auth.getSession();
+                        if (currentSession?.user) {
+                            await supabase.from('enrollments')
+                                .update({ progress_data: completed })
+                                .eq('course_id', courseId)
+                                .eq('user_id', currentSession.user.id);
+                        }
                     }
-                    // NOTA: Ya no actualizamos la base de datos automáticamente aquí.
+                    // NOTA: La bandera de "completed: true" que da la palomita
                     // Ahora se actualiza solo si es la última lección y le da a 'Finalizar'.
                 } catch (error) {
                     console.error("Error updating completion localStorage:", error)
@@ -449,18 +458,24 @@ const CourseViewer = () => {
                 setCourse(formattedCourse)
                 if (formattedCourse.thumbnail_url) extractColor(formattedCourse.thumbnail_url, false)
 
-                // 1.5 Fetch Enrollment to sync progress (Check if it's a new enrollment to reset local progress)
+                // 1.5 Fetch Enrollment to sync progress (Read from DB into LocalStorage)
                 const { data: enrollmentData } = await supabase
                     .from('enrollments')
-                    .select('id')
+                    .select('id, progress_data')
                     .eq('course_id', id)
                     .eq('user_id', session.user.id)
                     .single();
 
                 if (enrollmentData) {
+                    const completedKey = `lms_completed_${id}`;
+                    // Sincronizar hacia abajo: Forzamos la data de la DB a cargarse en local
+                    if (enrollmentData.progress_data && Array.isArray(enrollmentData.progress_data)) {
+                        localStorage.setItem(completedKey, JSON.stringify(enrollmentData.progress_data));
+                        updateCompletedLessons(); // Refrescar el estado de React inmediatamente
+                    }
+
                     const storedEnrollmentId = localStorage.getItem(`lms_enrollment_id_${id}`);
                     if (storedEnrollmentId && storedEnrollmentId !== String(enrollmentData.id)) {
-                        localStorage.removeItem(`lms_completed_${id}`);
                         localStorage.removeItem(`lms_last_active_lesson_${id}`);
                     }
                     localStorage.setItem(`lms_enrollment_id_${id}`, String(enrollmentData.id));
@@ -502,7 +517,7 @@ const CourseViewer = () => {
         }
     }, [id, navigate, extractColor, updateCompletedLessons])
 
-    const markLessonAsCompleted = React.useCallback((lessonId) => {
+    const markLessonAsCompleted = React.useCallback(async (lessonId) => {
         if (!course?.id) return;
         const completedKey = `lms_completed_${course.id}`;
         const completedText = localStorage.getItem(completedKey) || '[]';
@@ -513,6 +528,15 @@ const CourseViewer = () => {
                 localStorage.setItem(completedKey, JSON.stringify(completed));
                 window.dispatchEvent(new Event('lesson_completed'));
                 updateCompletedLessons();
+
+                // Sync specific progress array to DB
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session?.user) {
+                    await supabase.from('enrollments')
+                        .update({ progress_data: completed })
+                        .eq('course_id', course.id)
+                        .eq('user_id', session.user.id);
+                }
             }
         } catch (e) {
             console.error("Error saving progress", e)

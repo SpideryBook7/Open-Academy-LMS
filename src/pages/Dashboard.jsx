@@ -129,7 +129,7 @@ const Dashboard = () => {
 
             const { data: enrollmentData } = await supabase
                 .from('enrollments')
-                .select('id, course_id')
+                .select('id, course_id, completed, progress_data')
                 .eq('user_id', session.user.id)
                 // limit removido para procesar todas las especialidades
 
@@ -159,10 +159,14 @@ const Dashboard = () => {
                         // Sincronización de progreso por inscripción (reinicio al re-inscribir)
                         const storedEnrollmentId = localStorage.getItem(`lms_enrollment_id_${course.id}`);
                         if (storedEnrollmentId && storedEnrollmentId !== String(enrollment.id)) {
-                            localStorage.removeItem(`lms_completed_${course.id}`);
                             localStorage.removeItem(`lms_last_active_lesson_${course.id}`);
                         }
                         localStorage.setItem(`lms_enrollment_id_${course.id}`, String(enrollment.id));
+
+                        // Sincronizar desde la nube (si existe) al cliente
+                        if (enrollment.progress_data && Array.isArray(enrollment.progress_data)) {
+                            localStorage.setItem(`lms_completed_${course.id}`, JSON.stringify(enrollment.progress_data));
+                        }
 
                         const completedText = localStorage.getItem(`lms_completed_${course.id}`) || '[]';
                         try {
