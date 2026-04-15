@@ -179,7 +179,7 @@ const AdminDashboard = () => {
                         date: new Date(cert.created_at)
                     }))
                 }
-                setActivities(combined.sort((a,b) => b.date - a.date).slice(0, 15))
+                setActivities(combined.sort((a, b) => b.date - a.date).slice(0, 15))
             } catch (error) { console.error("Error fetching activity:", error) }
         }
 
@@ -416,7 +416,7 @@ const AdminDashboard = () => {
                             e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(0, 0, 0, 0.1)';
                         }}>
                         <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#0f172a', marginBottom: '1.5rem' }}>Actividad reciente del sistema</h2>
-                        
+
                         <div style={{ flex: 1, maxHeight: '480px', minHeight: '300px', overflowY: 'auto', paddingRight: '0.5rem' }} className="premium-scrollbar">
                             {activities.length > 0 ? (
                                 Object.entries(activities.reduce((acc, obj) => {
@@ -430,10 +430,10 @@ const AdminDashboard = () => {
                                         <p style={{ fontSize: '0.8rem', fontWeight: '700', color: '#737475ff', textTransform: 'uppercase', marginBottom: '1rem', letterSpacing: '1px' }}>
                                             {date}
                                         </p>
-                                        
+
                                         {items.map((item, idx) => {
                                             const getColors = () => {
-                                                switch(item.type) {
+                                                switch (item.type) {
                                                     case 'user': return { bg: '#dbf9cf', title: '#163e05', sub: '#2d5a15ff' };
                                                     case 'course': return { bg: '#ffeadb', title: '#854d0e', sub: '#a16207' };
                                                     case 'cert': return { bg: '#e0f2fe', title: '#1e40af', sub: '#1e3a8a' };
@@ -443,12 +443,12 @@ const AdminDashboard = () => {
                                             const colors = getColors();
 
                                             return (
-                                                <div 
-                                                    key={idx} 
-                                                    style={{ 
-                                                        backgroundColor: colors.bg, 
-                                                        padding: '1.25rem 1.8rem', 
-                                                        borderRadius: '16px', 
+                                                <div
+                                                    key={idx}
+                                                    style={{
+                                                        backgroundColor: colors.bg,
+                                                        padding: '1.25rem 1.8rem',
+                                                        borderRadius: '16px',
                                                         marginBottom: '0.75rem',
                                                         border: '1px solid rgba(0,0,0,0.02)',
                                                         display: 'flex',
@@ -622,11 +622,10 @@ const AdminDashboard = () => {
                     borderTop: '1px solid rgba(255, 255, 255, 0.06)',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '1.25rem',
                     position: 'relative',
                     zIndex: 10
                 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '2rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                                 <div style={{ width: '4px', height: '16px', backgroundColor: '#ff5e00', borderRadius: '4px' }}></div>
@@ -651,9 +650,9 @@ const AdminDashboard = () => {
 
                         <div style={{ display: 'flex', gap: '1rem' }}>
                             {[
-                                { link: 'https://www.facebook.com/DIPAAM.APIZACO/', /* ENLACE A FACEBOOK AQUI (ej: "https://www.facebook.com/tu-pagina") */ color: '#1877F2', icon: <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" /> },
+                                { link: 'https://www.facebook.com/DIPAAM.APIZACO/', color: '#1877F2', icon: <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" /> },
                                 {
-                                    link: 'https://www.instagram.com/conectaacademy/', /* ENLACE A INSTAGRAM AQUI (ej: "https://www.instagram.com/tu-perfil") */ color: '#E4405F', icon: (
+                                    link: 'https://www.instagram.com/conectaacademy/', color: '#E4405F', icon: (
                                         <>
                                             <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
                                             <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
@@ -661,7 +660,7 @@ const AdminDashboard = () => {
                                         </>
                                     )
                                 },
-                                { link: `https://wa.me/522411982236?text=${encodeURIComponent('Hola\nEstoy interesado en una especialidad\n¿Me podría dar información?')}`, /* ENLACE A WHATSAPP WEB AQUI (ej: "https://wa.me/numerodetelefono") */ color: '#25D366', icon: <path d="M3 21l1.65 -3.8a9 9 0 1 1 3.4 2.9l-5.05 .9 M9 10a.5 .5 0 0 0 1 0v-1a.5 .5 0 0 0 -1 0v1a5 5 0 0 0 5 5h1a.5 .5 0 0 0 0 -1h-1a.5 .5 0 0 0 0 1" /> }
+                                { link: `https://wa.me/522411982236?text=${encodeURIComponent('Hola\nEstoy interesado en una especialidad\n¿Me podría dar información?')}`, color: '#25D366', icon: <path d="M3 21l1.65 -3.8a9 9 0 1 1 3.4 2.9l-5.05 .9 M9 10a.5 .5 0 0 0 1 0v-1a.5 .5 0 0 0 -1 0v1a5 5 0 0 0 5 5h1a.5 .5 0 0 0 0 -1h-1a.5 .5 0 0 0 0 1" /> }
                             ].map((social, i) => (
                                 <a
                                     key={i}
@@ -703,27 +702,27 @@ const AdminDashboard = () => {
                     </div>
 
                     {/* Company Info Row */}
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', justifyContent: 'space-between', alignItems: 'flex-start', borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '1rem' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', maxWidth: '420px' }}>
-                            <p style={{ fontSize: '0.6rem', color: 'rgba(255, 255, 255, 0.2)', fontWeight: '700', letterSpacing: '1.5px', textTransform: 'uppercase', margin: 0 }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', justifyContent: 'space-between', alignItems: 'flex-start', borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '1rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', flex: '1 1 45%', minWidth: '320px' }}>
+                            <p style={{ fontSize: '0.85rem', color: 'rgba(255, 255, 255, 0.2)', fontWeight: '700', letterSpacing: '1px', textTransform: 'uppercase', margin: 0, lineHeight: 1.4 }}>
                                 CONECTA ACADEMY LATAM Y GRUPO DIPAAM MEXICO SON MARCAS REGISTRADAS.
                             </p>
-                            <p style={{ fontSize: '0.6rem', color: 'rgba(255, 255, 255, 0.2)', fontWeight: '500', letterSpacing: '0.5px', margin: 0 }}>
+                            <p style={{ fontSize: '0.85rem', color: 'rgba(255, 255, 255, 0.2)', fontWeight: '500', margin: 0, lineHeight: 1.4 }}>
                                 Hidalgo 303, Edificio Torre Apizaco, Ciudad de Apizaco, Tlaxcala, México C.P. 90300
                             </p>
                         </div>
-                        <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-end', flex: '1 1 45%', minWidth: '320px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                                <a href="mailto:grupodipaam@gmail.com" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.25)', textDecoration: 'none', fontWeight: '500' }}>grupodipaam@gmail.com</a>
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><polyline points="22,6 12,13 2,6" /></svg>
+                                <a href="mailto:grupodipaam@gmail.com" style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.25)', textDecoration: 'none', fontWeight: '500' }}>grupodipaam@gmail.com</a>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.62 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.08 6.08l.97-.97a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                                <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.25)', fontWeight: '500' }}>+52 241 167 0560</span>
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.62 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.08 6.08l.97-.97a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
+                                <span style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.25)', fontWeight: '500' }}>+52 241 167 0560</span>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21l1.65-3.8a9 9 0 1 1 3.4 2.9L3 21"/></svg>
-                                <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.25)', fontWeight: '500' }}>+52 241 163 19 68 &nbsp;|&nbsp; +52 241 198 22 36</span>
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21l1.65-3.8a9 9 0 1 1 3.4 2.9L3 21" /></svg>
+                                <span style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.25)', fontWeight: '500' }}>+52 241 163 19 68 &nbsp;|&nbsp; +52 241 198 22 36</span>
                             </div>
                         </div>
                     </div>

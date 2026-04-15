@@ -170,7 +170,7 @@ const Dashboard = () => {
                 .from('enrollments')
                 .select('id, course_id, completed, progress_data')
                 .eq('user_id', session.user.id)
-                // limit removido para procesar todas las especialidades
+            // limit removido para procesar todas las especialidades
 
             if (enrollmentData && enrollmentData.length > 0) {
                 const courseIds = enrollmentData.map(e => e.course_id)
@@ -178,7 +178,7 @@ const Dashboard = () => {
                     .from('courses')
                     .select('id, title, description, thumbnail_url, instructor_name, instructor_avatar')
                     .in('id', courseIds)
-                
+
                 const { data: lessonsData } = await supabase
                     .from('lessons')
                     .select('id, course_id')
@@ -193,7 +193,7 @@ const Dashboard = () => {
                     let progress = 0;
                     const courseLessons = (lessonsData || []).filter(l => l.course_id === course.id);
                     const totalLessons = courseLessons.length;
-                    
+
                     if (totalLessons > 0) {
                         // Sincronización de progreso por inscripción (reinicio al re-inscribir)
                         const storedEnrollmentId = localStorage.getItem(`lms_enrollment_id_${course.id}`);
@@ -222,7 +222,7 @@ const Dashboard = () => {
                                     .from('enrollments')
                                     .update({ completed: true })
                                     .eq('id', enrollment.id)
-                                    .then(({error}) => {
+                                    .then(({ error }) => {
                                         if (error) console.error("Error auto-completing specialty:", error);
                                     });
                             }
@@ -255,7 +255,7 @@ const Dashboard = () => {
 
     const handleResetProgress = async (courseId) => {
         if (!confirm('¿Estás seguro de que deseas reiniciar tu progreso en esta especialidad? Esto borrará tus lecciones completadas.')) return;
-        
+
         // 1. Clear LocalStorage
         localStorage.removeItem(`lms_completed_${courseId}`);
         localStorage.removeItem(`lms_completion_shown_${courseId}`);
@@ -274,7 +274,7 @@ const Dashboard = () => {
         }
         keysToRemove.forEach(k => localStorage.removeItem(k));
 
-        
+
         // 2. Update Database enrollment completed flag
         try {
             const { data: { session } } = await supabase.auth.getSession();
@@ -446,14 +446,14 @@ const Dashboard = () => {
                             animation: 'fadeInUp 0.8s ease-out 0.3s both',
                             transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
                         }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.transform = 'translateY(-8px)';
-                            e.currentTarget.style.boxShadow = '0 30px 60px -15px rgba(0, 0, 0, 0.5)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.boxShadow = '0 20px 40px -10px rgba(0, 0, 0, 0.3)';
-                        }}>
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.transform = 'translateY(-8px)';
+                                e.currentTarget.style.boxShadow = '0 30px 60px -15px rgba(0, 0, 0, 0.5)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.transform = 'translateY(0)';
+                                e.currentTarget.style.boxShadow = '0 20px 40px -10px rgba(0, 0, 0, 0.3)';
+                            }}>
                             {carouselSlides.map((slide, index) => (
                                 <div key={slide.id} style={{
                                     position: 'absolute',
@@ -546,12 +546,12 @@ const Dashboard = () => {
                                                     <span style={{ fontSize: '0.8rem', color: course.progress === 100 ? '#3bc029ff' : 'var(--accent-color)', fontWeight: '800' }}>{course.progress}%</span>
                                                 </div>
                                                 <div style={{ width: '100%', height: '8px', backgroundColor: '#f1f5f9', borderRadius: '10px', overflow: 'hidden' }}>
-                                                    <div style={{ 
-                                                        width: `${course.progress}%`, 
-                                                        height: '100%', 
-                                                        background: course.progress === 100 ? '#22e710ff' : 'linear-gradient(90deg, var(--accent-color), var(--primary-light))', 
-                                                        borderRadius: '10px', 
-                                                        transition: 'width 1s ease-in-out' 
+                                                    <div style={{
+                                                        width: `${course.progress}%`,
+                                                        height: '100%',
+                                                        background: course.progress === 100 ? '#22e710ff' : 'linear-gradient(90deg, var(--accent-color), var(--primary-light))',
+                                                        borderRadius: '10px',
+                                                        transition: 'width 1s ease-in-out'
                                                     }}></div>
                                                 </div>
                                             </div>
@@ -738,11 +738,10 @@ const Dashboard = () => {
                     borderTop: '1px solid rgba(255, 255, 255, 0.06)',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '1.25rem',
                     position: 'relative',
                     zIndex: 10
                 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '2rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                                 <div style={{ width: '4px', height: '16px', backgroundColor: '#ff5e00', borderRadius: '4px' }}></div>
@@ -819,27 +818,27 @@ const Dashboard = () => {
                     </div>
 
                     {/* Company Info Row */}
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', justifyContent: 'space-between', alignItems: 'flex-start', borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '1rem' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', maxWidth: '420px' }}>
-                            <p style={{ fontSize: '0.6rem', color: 'rgba(255, 255, 255, 0.2)', fontWeight: '700', letterSpacing: '1.5px', textTransform: 'uppercase', margin: 0 }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', justifyContent: 'space-between', alignItems: 'flex-start', borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '1rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', flex: '1 1 45%', minWidth: '320px' }}>
+                            <p style={{ fontSize: '0.85rem', color: 'rgba(255, 255, 255, 0.2)', fontWeight: '700', letterSpacing: '1px', textTransform: 'uppercase', margin: 0, lineHeight: 1.4 }}>
                                 CONECTA ACADEMY LATAM Y GRUPO DIPAAM MEXICO SON MARCAS REGISTRADAS.
                             </p>
-                            <p style={{ fontSize: '0.6rem', color: 'rgba(255, 255, 255, 0.2)', fontWeight: '500', letterSpacing: '0.5px', margin: 0 }}>
+                            <p style={{ fontSize: '0.85rem', color: 'rgba(255, 255, 255, 0.2)', fontWeight: '500', margin: 0, lineHeight: 1.4 }}>
                                 Hidalgo 303, Edificio Torre Apizaco, Ciudad de Apizaco, Tlaxcala, México C.P. 90300
                             </p>
                         </div>
-                        <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-end', flex: '1 1 45%', minWidth: '320px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                                <a href="mailto:grupodipaam@gmail.com" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.25)', textDecoration: 'none', fontWeight: '500' }}>grupodipaam@gmail.com</a>
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><polyline points="22,6 12,13 2,6" /></svg>
+                                <a href="mailto:grupodipaam@gmail.com" style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.25)', textDecoration: 'none', fontWeight: '500' }}>grupodipaam@gmail.com</a>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.62 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.08 6.08l.97-.97a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                                <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.25)', fontWeight: '500' }}>+52 241 167 0560</span>
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.62 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.08 6.08l.97-.97a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
+                                <span style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.25)', fontWeight: '500' }}>+52 241 167 0560</span>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21l1.65-3.8a9 9 0 1 1 3.4 2.9L3 21"/></svg>
-                                <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.25)', fontWeight: '500' }}>+52 241 163 19 68 &nbsp;|&nbsp; +52 241 198 22 36</span>
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21l1.65-3.8a9 9 0 1 1 3.4 2.9L3 21" /></svg>
+                                <span style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.25)', fontWeight: '500' }}>+52 241 163 19 68 &nbsp;|&nbsp; +52 241 198 22 36</span>
                             </div>
                         </div>
                     </div>

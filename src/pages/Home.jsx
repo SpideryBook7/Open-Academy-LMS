@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import logoConecta from "../assets/LOGO-CONECTA.png";
 import logoDipaam from "../assets/LOGO DIPAAM RESPLANDOR.png";
+import conectaHomeImg from "../assets/Conecta-home.jpg";
 
 const Home = () => {
   const [loading, setLoading] = useState(false);
@@ -145,7 +146,7 @@ const Home = () => {
           >
             <h2
               style={{
-                fontSize: "2.5rem",
+                fontSize: "1.5rem",
                 fontWeight: "700",
                 color: "#0f172a",
                 marginBottom: "0.5rem",
@@ -153,7 +154,7 @@ const Home = () => {
               }}
             >
               Bienvenido a{" "}
-              <span style={{ color: "var(--accent-color)" }}>SIRA</span>
+              <span style={{ color: "var(--accent-color)" }}>Conecta Academy y Grupo DiPAAm</span>
             </h2>
             <p
               style={{
@@ -420,194 +421,23 @@ const Home = () => {
       <div
         style={{
           flex: "1.4",
-          backgroundColor: "#0f172a", // Matching NotFound feel
-          position: "relative",
+          backgroundColor: "#ffffff",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           overflow: "hidden",
         }}
       >
-        {/* Premium Decorative Glows */}
-        <div
+        <img 
+          src={conectaHomeImg} 
+          alt="Conecta Academy y Grupo DiPAAm"
           style={{
-            position: "absolute",
-            top: "-10%",
-            right: "-10%",
-            width: "1000px",
-            height: "1000px",
-            borderRadius: "50%",
-            background:
-              "radial-gradient(circle, var(--accent-color) 0%, transparent 40%)",
-            filter: "blur(10px)",
-            zIndex: 0,
-            opacity: 0.2,
-            animation: "pulse-glow 12s infinite ease-in-out",
-          }}
-        ></div>
-        <div
-          style={{
-            position: "absolute",
-            bottom: "-10%",
-            left: "-10%",
-            width: "800px",
-            height: "800px",
-            borderRadius: "50%",
-            background:
-              "radial-gradient(circle, var(--accent-gold) 0%, transparent 70%)",
-            filter: "blur(100px)",
-            zIndex: 0,
-            opacity: 0.1,
-            animation: "pulse-glow 15s infinite ease-in-out reverse",
-          }}
-        ></div>
-
-        {/* Main Content Card */}
-        <div
-          style={{
-            position: "relative",
-            zIndex: 1,
             width: "100%",
-            maxWidth: "80%",
-            animation: "slideInRight 1.2s cubic-bezier(0.23, 1, 0.32, 1)",
+            height: "100%",
+            objectFit: "cover",
+            animation: "fadeInUp 0.8s ease-out both"
           }}
-        >
-          {/* Glass Container */}
-          <div
-            style={{
-              backgroundColor: "rgba(255, 255, 255, 0.03)",
-              backdropFilter: "blur(25px)",
-              padding: "4.5rem",
-              borderRadius: "60px",
-              border: "1px solid rgba(255, 255, 255, 0.1)",
-              boxShadow: "0 50px 100px -20px rgba(0,0,0,0.6)",
-            }}
-          >
-            <div
-              style={{
-                fontSize: "0.85rem",
-                fontWeight: "700",
-                color: "var(--accent-gold)",
-                textTransform: "uppercase",
-                letterSpacing: "4px",
-                marginBottom: "1.5rem",
-                display: "block",
-              }}
-            >
-              Web Académica - SIRA
-            </div>
-            <h2
-              style={{
-                fontSize: "4.5rem",
-                fontWeight: "700",
-                color: "#ffffff",
-                lineHeight: "1.1",
-                letterSpacing: "-2px",
-                marginBottom: "2rem",
-              }}
-            >
-              Impulsa tu <br />
-              <span
-                style={{
-                  background:
-                    "linear-gradient(135deg, #ffffff 40%, rgba(255,255,255,0.4) 100%)",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                }}
-              >
-                Crecimiento.
-              </span>
-            </h2>
-            <div
-              style={{
-                width: "125px",
-                height: "6px",
-                background: "var(--accent-gold)",
-                borderRadius: "10px",
-                marginBottom: "2rem",
-              }}
-            ></div>
-            <p
-              style={{
-                fontSize: "1.2rem",
-                color: "rgba(255,255,255,0.7)",
-                lineHeight: "1.8",
-                maxWidth: "500px",
-                fontWeight: "500",
-              }}
-            >
-              Plataforma de gestión de recursos académicos y aprendizaje
-              continuo.
-            </p>
-
-            {/* Stats / Proof points */}
-            <div style={{ display: "flex", gap: "3rem", marginTop: "4rem" }}>
-              <div>
-                <div
-                  style={{
-                    fontSize: "2rem",
-                    fontWeight: "900",
-                    color: "#ffffff",
-                  }}
-                >
-                  100%
-                </div>
-                <div
-                  style={{
-                    fontSize: "0.8rem",
-                    fontWeight: "700",
-                    color: "rgba(255,255,255,0.4)",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  Seguridad
-                </div>
-              </div>
-              <div>
-                <div
-                  style={{
-                    fontSize: "2rem",
-                    fontWeight: "900",
-                    color: "#ffffff",
-                  }}
-                >
-                  24/7
-                </div>
-                <div
-                  style={{
-                    fontSize: "0.8rem",
-                    fontWeight: "700",
-                    color: "rgba(255,255,255,0.4)",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  Disponibilidad
-                </div>
-              </div>
-              <div>
-                <div
-                  style={{
-                    fontSize: "2rem",
-                    fontWeight: "900",
-                    color: "#ffffff",
-                  }}
-                >
-                  ∞
-                </div>
-                <div
-                  style={{
-                    fontSize: "0.8rem",
-                    fontWeight: "700",
-                    color: "rgba(255,255,255,0.4)",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  Potencial
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        />
       </div>
 
       {/* Global Spinner Animation for loading button */}
