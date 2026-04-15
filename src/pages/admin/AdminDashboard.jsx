@@ -328,7 +328,7 @@ const AdminDashboard = () => {
                                 <div style={{ padding: '0.8rem', backgroundColor: '#eff6ff', borderRadius: '18px', color: '#3b82f6' }}>
                                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                                 </div>
-                                <span style={{ fontSize: '1.2rem', fontWeight: '700', color: '#1e293b' }}>Usuarios totales</span>
+                                <span style={{ fontSize: '1.2rem', fontWeight: '700', color: '#1e293b' }}>Usuarios</span>
                             </div>
                             <p style={{ fontSize: '3rem', fontWeight: '700', color: '#0f172a', margin: 0, letterSpacing: '-1px' }}>{stats.users}</p>
                         </div>
@@ -356,7 +356,7 @@ const AdminDashboard = () => {
                                 <div style={{ padding: '0.8rem', backgroundColor: '#f0fdf4', borderRadius: '18px', color: '#22c55e' }}>
                                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
                                 </div>
-                                <span style={{ fontSize: '1.2rem', fontWeight: '700', color: '#1e293b' }}>Especialidades totales</span>
+                                <span style={{ fontSize: '1.2rem', fontWeight: '700', color: '#1e293b' }}>Especialidades</span>
                             </div>
                             <p style={{ fontSize: '3rem', fontWeight: '700', color: '#0f172a', margin: 0, letterSpacing: '-1px' }}>{stats.courses}</p>
                         </div>
@@ -384,7 +384,7 @@ const AdminDashboard = () => {
                                 <div style={{ padding: '0.8rem', backgroundColor: '#fff7ed', borderRadius: '18px', color: '#f97316' }}>
                                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
                                 </div>
-                                <span style={{ fontSize: '1.2rem', fontWeight: '700', color: '#1e293b' }}>Alumnos inscritos</span>
+                                <span style={{ fontSize: '1.2rem', fontWeight: '700', color: '#1e293b' }}>Inscripciones</span>
                             </div>
                             <p style={{ fontSize: '3rem', fontWeight: '700', color: '#0f172a', margin: 0, letterSpacing: '-1px' }}>{stats.enrollments}</p>
                         </div>
@@ -635,7 +635,7 @@ const AdminDashboard = () => {
                                         background: 'linear-gradient(90deg, #ff1f1f 0%, #00d2ff 100%)',
                                         WebkitBackgroundClip: 'text',
                                         WebkitTextFillColor: 'transparent',
-                                    }}>DiPAAm</span>
+                                    }}>Grupo DiPAAm</span>
                                     <span style={{ color: 'rgba(255, 255, 255, 0.1)', fontWeight: '300' }}>/</span>
                                     <span style={{
                                         background: 'linear-gradient(90deg, #ff9000 0%, #0077ff 100%)',
@@ -644,16 +644,16 @@ const AdminDashboard = () => {
                                     }}>CONECTA ACADEMY LATAM</span>
                                 </h3>
                             </div>
-                            <p style={{ fontSize: '0.75rem', color: 'rgba(255, 255, 255, 0.3)', fontWeight: '600', marginLeft: '1.25rem', textTransform: 'uppercase', letterSpacing: '2px' }}>
+                            {/* <p style={{ fontSize: '0.75rem', color: 'rgba(255, 255, 255, 0.3)', fontWeight: '600', marginLeft: '1.25rem', textTransform: 'uppercase', letterSpacing: '2px' }}>
                                 CONECTA <span style={{ mx: '0.5rem', opacity: 0.3 }}>•</span> Sistema de Información y Recursos Académicos
-                            </p>
+                            </p> */}
                         </div>
 
                         <div style={{ display: 'flex', gap: '1rem' }}>
                             {[
-                                { link: '#', /* ENLACE A FACEBOOK AQUI (ej: "https://www.facebook.com/tu-pagina") */ color: '#1877F2', icon: <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" /> },
+                                { link: 'https://www.facebook.com/DIPAAM.APIZACO/', /* ENLACE A FACEBOOK AQUI (ej: "https://www.facebook.com/tu-pagina") */ color: '#1877F2', icon: <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" /> },
                                 {
-                                    link: '#', /* ENLACE A INSTAGRAM AQUI (ej: "https://www.instagram.com/tu-perfil") */ color: '#E4405F', icon: (
+                                    link: 'https://www.instagram.com/conectaacademy/', /* ENLACE A INSTAGRAM AQUI (ej: "https://www.instagram.com/tu-perfil") */ color: '#E4405F', icon: (
                                         <>
                                             <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
                                             <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
@@ -661,7 +661,7 @@ const AdminDashboard = () => {
                                         </>
                                     )
                                 },
-                                { link: '#', /* ENLACE A WHATSAPP WEB AQUI (ej: "https://wa.me/numerodetelefono") */ color: '#25D366', icon: <path d="M3 21l1.65 -3.8a9 9 0 1 1 3.4 2.9l-5.05 .9 M9 10a.5 .5 0 0 0 1 0v-1a.5 .5 0 0 0 -1 0v1a5 5 0 0 0 5 5h1a.5 .5 0 0 0 0 -1h-1a.5 .5 0 0 0 0 1" /> }
+                                { link: `https://wa.me/522411982236?text=${encodeURIComponent('Hola\nEstoy interesado en una especialidad\n¿Me podría dar información?')}`, /* ENLACE A WHATSAPP WEB AQUI (ej: "https://wa.me/numerodetelefono") */ color: '#25D366', icon: <path d="M3 21l1.65 -3.8a9 9 0 1 1 3.4 2.9l-5.05 .9 M9 10a.5 .5 0 0 0 1 0v-1a.5 .5 0 0 0 -1 0v1a5 5 0 0 0 5 5h1a.5 .5 0 0 0 0 -1h-1a.5 .5 0 0 0 0 1" /> }
                             ].map((social, i) => (
                                 <a
                                     key={i}
@@ -699,6 +699,32 @@ const AdminDashboard = () => {
                                     </svg>
                                 </a>
                             ))}
+                        </div>
+                    </div>
+
+                    {/* Company Info Row */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', justifyContent: 'space-between', alignItems: 'flex-start', borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '1rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', maxWidth: '420px' }}>
+                            <p style={{ fontSize: '0.6rem', color: 'rgba(255, 255, 255, 0.2)', fontWeight: '700', letterSpacing: '1.5px', textTransform: 'uppercase', margin: 0 }}>
+                                CONECTA ACADEMY LATAM Y GRUPO DIPAAM MEXICO SON MARCAS REGISTRADAS.
+                            </p>
+                            <p style={{ fontSize: '0.6rem', color: 'rgba(255, 255, 255, 0.2)', fontWeight: '500', letterSpacing: '0.5px', margin: 0 }}>
+                                Hidalgo 303, Edificio Torre Apizaco, Ciudad de Apizaco, Tlaxcala, México C.P. 90300
+                            </p>
+                        </div>
+                        <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                                <a href="mailto:grupodipaam@gmail.com" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.25)', textDecoration: 'none', fontWeight: '500' }}>grupodipaam@gmail.com</a>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.62 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.08 6.08l.97-.97a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                                <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.25)', fontWeight: '500' }}>+52 241 167 0560</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21l1.65-3.8a9 9 0 1 1 3.4 2.9L3 21"/></svg>
+                                <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.25)', fontWeight: '500' }}>+52 241 163 19 68 &nbsp;|&nbsp; +52 241 198 22 36</span>
+                            </div>
                         </div>
                     </div>
 

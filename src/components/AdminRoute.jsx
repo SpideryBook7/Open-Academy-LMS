@@ -17,7 +17,7 @@ const AdminRoute = () => {
             }
 
             // Check profile role
-            const { data, error } = await supabase
+            const { data } = await supabase
                 .from('profiles')
                 .select('role')
                 .eq('id', session.user.id)

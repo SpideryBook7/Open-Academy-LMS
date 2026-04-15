@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import logoConecta from '../assets/LOGO-CONECTA.png'
 import logoDipaam from '../assets/LOGO DIPAAM RESPLANDOR.png'
+import manualEstudiante from '../assets/Manual_Estudiante_SIRA_20260317_v1.0.pdf'
 
 const Sidebar = () => {
     const location = useLocation()
@@ -146,6 +147,26 @@ const Sidebar = () => {
                             </li>
                         )
                     })}
+                    <li style={{ marginBottom: '0.5rem' }}>
+                        <a
+                            href={manualEstudiante}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="sidebar-link"
+                            style={{
+                                color: '#ffffff',
+                                backgroundColor: 'transparent',
+                                borderLeft: '3px solid transparent',
+                                fontWeight: '400',
+                                borderRadius: '8px',
+                            }}
+                        >
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.7, transition: 'all 0.3s' }}>
+                                <path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path>
+                            </svg>
+                            Manual de Usuario
+                        </a>
+                    </li>
                 </ul>
             </nav>
 

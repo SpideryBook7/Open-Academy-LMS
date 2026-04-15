@@ -2,25 +2,64 @@ import React, { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useNavigate } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
+import carouselPicture1 from '../assets/carusel_picture1.jpeg'
+import carouselPicture2 from '../assets/carusel_picture2.png'
 
 const carouselSlides = [
     {
         id: 1,
-        image: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80",
-        title: "Acelera tu Aprendizaje",
-        text: "Descubre nuevas especialidades y recursos diseñados exclusivamente para impulsar tu carrera profesional en DiPAAm y Conecta Academy."
+        image: carouselPicture1,
+        title: "Nuestra Misión y Visión",
+        customContent: (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', width: '100%' }}>
+                <div>
+                    <p style={{ fontSize: '1.3rem', fontWeight: '700', color: 'var(--accent-gold)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '0.5rem' }}>NUESTRA MISIÓN</p>
+                    <p style={{ fontSize: '1rem', color: 'rgba(255, 255, 255, 0.92)', fontWeight: '400', fontStyle: 'italic', lineHeight: '1.6' }}>
+                        "Transformar el bienestar en Latinoamérica, acercando el mejor conocimiento a quienes cuidan de la salud mental y el talento de las personas"
+                    </p>
+                </div>
+                <div style={{ borderLeft: '1px solid rgba(255,255,255,0.2)', paddingLeft: '2rem' }}>
+                    <p style={{ fontSize: '1.3rem', fontWeight: '700', color: 'var(--accent-gold)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '0.5rem' }}>NUESTRA VISIÓN</p>
+                    <p style={{ fontSize: '1rem', color: 'rgba(255, 255, 255, 0.92)', fontWeight: '400', fontStyle: 'italic', lineHeight: '1.6' }}>
+                        "Convertirnos en el estándar de excelencia para los profesionales que buscan transformar el bienestar humano y organizacional en toda Latinoamérica"
+                    </p>
+                </div>
+            </div>
+        )
     },
     {
         id: 2,
-        image: "https://images.unsplash.com/photo-1516321497487-e288fb19713f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80",
-        title: "Crece en Comunidad",
-        text: "Conecta con expertos y otros estudiantes. El verdadero conocimiento se construye compartiendo experiencias."
-    },
-    {
-        id: 3,
-        image: "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80",
-        title: "Alcanza tus Metas",
-        text: "Nuestras herramientas de seguimiento te ayudarán a no perder el rumbo y lograr cada objetivo académico trazado."
+        image: carouselPicture2,
+        title: "Nuestros Valores",
+        customContent: (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.6fr', gap: '2rem', width: '100%', alignItems: 'start' }}>
+                <div>
+                    <p style={{ fontSize: '1.3rem', fontWeight: '700', color: 'var(--accent-gold)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '0.75rem' }}>NUESTROS VALORES</p>
+                    <p style={{ fontSize: '0.85rem', color: 'rgba(255, 255, 255, 0.85)', fontWeight: '400', lineHeight: '1.6' }}>
+                        Creemos que la transformaci&oacute;n comienza desde adentro. Estos valores representan lo que somos, lo que hacemos y el impacto que buscamos generar en cada persona.
+                    </p>
+                </div>
+                <div style={{ borderLeft: '1px solid rgba(255,255,255,0.2)', paddingLeft: '2rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem 1.5rem' }}>
+                    {[
+                        { name: 'Compartir', desc: 'Impulsamos el acceso al conocimiento' },
+                        { name: 'Servicio', desc: 'Experiencias de aprendizaje \u00fatiles y de alta calidad' },
+                        { name: 'Respeto', desc: 'Relaciones basadas en confianza mutua' },
+                        { name: 'Liderazgo', desc: 'Inspiramos a crecer y generar impacto' },
+                        { name: 'Crecimiento', desc: 'Convertimos cada experiencia en evoluci\u00f3n' },
+                        { name: 'Bienestar', desc: 'Equilibrio entre desarrollo y salud integral' },
+                        { name: 'Humildad', desc: 'Siempre aprendemos y mejoramos' },
+                    ].map((v) => (
+                        <div key={v.name} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.4rem' }}>
+                            <span style={{ color: 'var(--accent-gold)', fontWeight: '800', fontSize: '0.7rem', marginTop: '2px', flexShrink: 0 }}>✦</span>
+                            <div>
+                                <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'white' }}>{v.name}: </span>
+                                <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.8)', fontWeight: '400' }}>{v.desc}</span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        )
     }
 ]
 
@@ -398,7 +437,7 @@ const Dashboard = () => {
                     {carouselSlides.length > 0 && (
                         <div style={{
                             width: '100%',
-                            height: '280px',
+                            height: '340px',
                             borderRadius: '32px',
                             overflow: 'hidden',
                             position: 'relative',
@@ -431,10 +470,15 @@ const Dashboard = () => {
                                 }}>
                                     <img src={slide.image} alt={slide.title} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 1 }} />
                                     <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'linear-gradient(to right, rgba(0,0,0,0.7), transparent)', zIndex: 2 }}></div>
-                                    <div style={{ position: 'relative', zIndex: 3, padding: '0 4rem', maxWidth: '600px', animation: currentSlide === index ? 'fadeInLeft 0.8s ease-out' : 'none' }}>
-                                        <h2 style={{ fontSize: '2.5rem', fontWeight: '800', color: 'white', marginBottom: '1rem', textShadow: '0 2px 10px rgba(0,0,0,0.3)' }}>{slide.title}</h2>
-                                        <p style={{ fontSize: '1.1rem', color: 'rgba(255, 255, 255, 0.9)', marginBottom: '1.8rem', fontWeight: '500' }}>{slide.text}</p>
-                                        <button onClick={() => navigate('/courses')} style={{ padding: '0.85rem 2rem', backgroundColor: 'var(--accent-gold)', color: '#000', border: 'none', borderRadius: '14px', fontWeight: '700', fontSize: '1rem', cursor: 'pointer', transition: 'all 0.3s ease', boxShadow: '0 8px 16px rgba(255, 193, 7, 0.3)' }}>Ver Especialidades</button>
+                                    <div style={{ position: 'relative', zIndex: 3, padding: '0 4rem', maxWidth: slide.customContent ? '90%' : '600px', width: slide.customContent ? '90%' : 'auto', animation: currentSlide === index ? 'fadeInLeft 0.8s ease-out' : 'none' }}>
+                                        {slide.customContent ? (
+                                            slide.customContent
+                                        ) : (
+                                            <>
+                                                <h2 style={{ fontSize: '2.5rem', fontWeight: '700', color: 'white', marginBottom: '1rem', textShadow: '0 2px 10px rgba(0,0,0,0.3)' }}>{slide.title}</h2>
+                                                <p style={{ fontSize: '1.1rem', color: 'rgba(255, 255, 255, 0.9)', marginBottom: '0', fontWeight: '500' }}>{slide.text}</p>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                             ))}
@@ -707,7 +751,7 @@ const Dashboard = () => {
                                         background: 'linear-gradient(90deg, #ff1f1f 0%, #00d2ff 100%)',
                                         WebkitBackgroundClip: 'text',
                                         WebkitTextFillColor: 'transparent',
-                                    }}>DiPAAm</span>
+                                    }}>Grupo DiPAAm</span>
                                     <span style={{ color: 'rgba(255, 255, 255, 0.1)', fontWeight: '300' }}>/</span>
                                     <span style={{
                                         background: 'linear-gradient(90deg, #ff9000 0%, #0077ff 100%)',
@@ -716,16 +760,16 @@ const Dashboard = () => {
                                     }}>CONECTA ACADEMY LATAM</span>
                                 </h3>
                             </div>
-                            <p style={{ fontSize: '0.75rem', color: 'rgba(255, 255, 255, 0.3)', fontWeight: '600', marginLeft: '1.25rem', textTransform: 'uppercase', letterSpacing: '2px' }}>
+                            {/* <p style={{ fontSize: '0.75rem', color: 'rgba(255, 255, 255, 0.3)', fontWeight: '600', marginLeft: '1.25rem', textTransform: 'uppercase', letterSpacing: '2px' }}>
                                 CONECTA <span style={{ mx: '0.5rem', opacity: 0.3 }}>•</span> Sistema de Información y Recursos Académicos
-                            </p>
+                            </p> */}
                         </div>
 
                         <div style={{ display: 'flex', gap: '1rem' }}>
                             {[
-                                { color: '#1877F2', icon: <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" /> },
+                                { link: 'https://www.facebook.com/DIPAAM.APIZACO/', color: '#1877F2', icon: <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" /> },
                                 {
-                                    color: '#E4405F', icon: (
+                                    link: 'https://www.instagram.com/conectaacademy/', color: '#E4405F', icon: (
                                         <>
                                             <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
                                             <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
@@ -733,10 +777,13 @@ const Dashboard = () => {
                                         </>
                                     )
                                 },
-                                { color: '#25D366', icon: <path d="M3 21l1.65 -3.8a9 9 0 1 1 3.4 2.9l-5.05 .9 M9 10a.5 .5 0 0 0 1 0v-1a.5 .5 0 0 0 -1 0v1a5 5 0 0 0 5 5h1a.5 .5 0 0 0 0 -1h-1a.5 .5 0 0 0 0 1" /> }
+                                { link: `https://wa.me/522411982236?text=${encodeURIComponent('Hola\nEstoy interesado en una especialidad\n¿Me podría dar información?')}`, color: '#25D366', icon: <path d="M3 21l1.65 -3.8a9 9 0 1 1 3.4 2.9l-5.05 .9 M9 10a.5 .5 0 0 0 1 0v-1a.5 .5 0 0 0 -1 0v1a5 5 0 0 0 5 5h1a.5 .5 0 0 0 0 -1h-1a.5 .5 0 0 0 0 1" /> }
                             ].map((social, i) => (
-                                <div
+                                <a
                                     key={i}
+                                    href={social.link}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
                                     style={{
                                         width: '38px',
                                         height: '38px',
@@ -747,7 +794,8 @@ const Dashboard = () => {
                                         justifyContent: 'center',
                                         cursor: 'pointer',
                                         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                        border: '1px solid rgba(255, 255, 255, 0.2)'
+                                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                                        textDecoration: 'none'
                                     }}
                                     onMouseEnter={(e) => {
                                         e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.06)';
@@ -765,8 +813,34 @@ const Dashboard = () => {
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'stroke 0.3s ease' }}>
                                         {social.icon}
                                     </svg>
-                                </div>
+                                </a>
                             ))}
+                        </div>
+                    </div>
+
+                    {/* Company Info Row */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', justifyContent: 'space-between', alignItems: 'flex-start', borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '1rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', maxWidth: '420px' }}>
+                            <p style={{ fontSize: '0.6rem', color: 'rgba(255, 255, 255, 0.2)', fontWeight: '700', letterSpacing: '1.5px', textTransform: 'uppercase', margin: 0 }}>
+                                CONECTA ACADEMY LATAM Y GRUPO DIPAAM MEXICO SON MARCAS REGISTRADAS.
+                            </p>
+                            <p style={{ fontSize: '0.6rem', color: 'rgba(255, 255, 255, 0.2)', fontWeight: '500', letterSpacing: '0.5px', margin: 0 }}>
+                                Hidalgo 303, Edificio Torre Apizaco, Ciudad de Apizaco, Tlaxcala, México C.P. 90300
+                            </p>
+                        </div>
+                        <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                                <a href="mailto:grupodipaam@gmail.com" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.25)', textDecoration: 'none', fontWeight: '500' }}>grupodipaam@gmail.com</a>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.62 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.08 6.08l.97-.97a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                                <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.25)', fontWeight: '500' }}>+52 241 167 0560</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21l1.65-3.8a9 9 0 1 1 3.4 2.9L3 21"/></svg>
+                                <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.25)', fontWeight: '500' }}>+52 241 163 19 68 &nbsp;|&nbsp; +52 241 198 22 36</span>
+                            </div>
                         </div>
                     </div>
 

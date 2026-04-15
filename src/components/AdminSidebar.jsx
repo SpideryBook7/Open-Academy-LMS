@@ -1,9 +1,12 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import logoConecta from '../assets/LOGO-CONECTA.png'
 import logoDipaam from '../assets/LOGO DIPAAM RESPLANDOR.png'
+import manualEstudiante from '../assets/Manual_Estudiante_SIRA_20260317_v1.0.pdf'
+import manualAdmin from '../assets/Manual_Administrador_SIRA_20260319_v1.1.pdf'
 const AdminSidebar = () => {
     const location = useLocation()
+    const [isManualOpen, setIsManualOpen] = useState(false)
 
     const menuItems = [
         { name: 'Inicio', path: '/admin/dashboard', icon: <><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></> },
@@ -49,6 +52,15 @@ const AdminSidebar = () => {
                 }
 
                 .sidebar-link:hover svg {
+                    color: white !important;
+                    opacity: 1 !important;
+                }
+
+                .sidebar-link-sub {
+                    transition: all 0.3s ease;
+                }
+                .sidebar-link-sub:hover {
+                    background-color: rgba(255, 255, 255, 0.1) !important;
                     color: white !important;
                     opacity: 1 !important;
                 }
@@ -124,6 +136,90 @@ const AdminSidebar = () => {
                             </li>
                         )
                     })}
+
+                    {/* Manuales Dropdown */}
+                    <li style={{ marginBottom: '0.5rem' }}>
+                        <div
+                            onClick={() => setIsManualOpen(!isManualOpen)}
+                            className="sidebar-link"
+                            style={{
+                                color: '#ffffff',
+                                backgroundColor: 'transparent',
+                                borderLeft: '3px solid transparent',
+                                fontWeight: '400',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                                justifyContent: 'space-between'
+                            }}
+                        >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.7, transition: 'all 0.3s' }}>
+                                    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                                </svg>
+                                Manuales
+                            </div>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: isManualOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s' }}>
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </div>
+                        
+                        {/* Dropdown Options */}
+                        <div style={{
+                            maxHeight: isManualOpen ? '200px' : '0',
+                            overflow: 'hidden',
+                            transition: 'max-height 0.3s ease-in-out',
+                            paddingLeft: '2.8rem',
+                            marginTop: isManualOpen ? '0.2rem' : '0'
+                        }}>
+                            <a
+                                href={manualEstudiante}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="sidebar-link-sub"
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.8rem',
+                                    padding: '0.6rem 1rem',
+                                    color: '#ffffff',
+                                    textDecoration: 'none',
+                                    opacity: 0.8,
+                                    fontSize: '0.9rem',
+                                    marginBottom: '0.2rem',
+                                    borderRadius: '6px',
+                                    backgroundColor: 'transparent',
+                                }}
+                            >
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path>
+                                </svg>
+                                Estudiante
+                            </a>
+                            <a
+                                href={manualAdmin}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="sidebar-link-sub"
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.8rem',
+                                    padding: '0.6rem 1rem',
+                                    color: '#ffffff',
+                                    textDecoration: 'none',
+                                    opacity: 0.8,
+                                    fontSize: '0.9rem',
+                                    borderRadius: '6px',
+                                    backgroundColor: 'transparent',
+                                }}
+                            >
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                                </svg>
+                                Administrador
+                            </a>
+                        </div>
+                    </li>
                 </ul>
             </nav>
 
